@@ -1,0 +1,64 @@
+<?xml version="1.0" encoding="utf-8"?>
+<androidx.coordinatorlayout.widget.CoordinatorLayout
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent">
+
+    <!-- 🗺️ MAP -->
+    <fragment
+        android:id="@+id/patientMap"
+        android:name="com.google.android.gms.maps.SupportMapFragment"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"/>
+
+    <!-- 🔍 SEARCH BAR (Google Maps style floating) -->
+    <android.widget.SearchView android:id="@+id/searchView"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_margin="16dp"
+        android:queryHint="Search blood group (A+, O-, etc)"
+        android:background="@drawable/bg_search"
+        app:layout_anchorGravity="top"/>
+
+    <!-- 🔴 LOGOUT BUTTON -->
+
+
+    <!-- ⬆️ BOTTOM SHEET -->
+    <LinearLayout
+        android:id="@+id/bottomSheet"
+        android:layout_width="match_parent"
+        android:layout_height="420dp"
+        android:orientation="vertical"
+        android:background="@drawable/bg_bottom_sheet"
+        app:behavior_hideable="true"
+        app:behavior_peekHeight="90dp"
+        app:layout_behavior="com.google.android.material.bottomsheet.BottomSheetBehavior">
+
+        <!-- Drag Handle -->
+        <View
+            android:layout_width="40dp"
+            android:layout_height="5dp"
+            android:layout_gravity="center"
+            android:layout_marginTop="8dp"
+            android:background="@drawable/bg_drag_handle"/>
+
+        <!-- Title -->
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Nearby Blood Donors"
+            android:textSize="18sp"
+            android:textStyle="bold"
+            android:layout_margin="16dp"/>
+
+        <!-- RecyclerView (Donor List) -->
+        <androidx.recyclerview.widget.RecyclerView
+            android:id="@+id/donorRecyclerView"
+            android:layout_width="match_parent"
+            android:layout_height="0dp"
+            android:layout_weight="1"
+            android:padding="8dp"/>
+    </LinearLayout>
+
+</androidx.coordinatorlayout.widget.CoordinatorLayout>
