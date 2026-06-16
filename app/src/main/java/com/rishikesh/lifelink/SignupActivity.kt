@@ -30,8 +30,7 @@ class SignupActivity : AppCompatActivity() {
         passwordEt = findViewById(R.id.passwordEt)
         signupBtn = findViewById(R.id.signupBtn)
         loginText = findViewById(R.id.loginText)
-        patientRadio = findViewById(R.id.patientRadio)
-        donorRadio = findViewById(R.id.donorRadio)
+
 
         signupBtn.setOnClickListener {
             registerUser()
@@ -47,13 +46,8 @@ class SignupActivity : AppCompatActivity() {
         val email = emailEt.text.toString().trim()
         val password = passwordEt.text.toString().trim()
 
-        val userType = when {
-            patientRadio.isChecked -> "Patient"
-            donorRadio.isChecked -> "Donor"
-            else -> ""
-        }
 
-        if (name.isEmpty() || email.isEmpty() || password.isEmpty() || userType.isEmpty()) {
+        if (name.isEmpty() || email.isEmpty() || password.isEmpty()) {
             Toast.makeText(this, "Please fill all fields", Toast.LENGTH_SHORT).show()
             return
         }
@@ -66,8 +60,7 @@ class SignupActivity : AppCompatActivity() {
 
                 val userMap = hashMapOf(
                     "name" to name,
-                    "email" to email,
-                    "userType" to userType
+                    "email" to email
                 )
 
                 db.collection("Users")

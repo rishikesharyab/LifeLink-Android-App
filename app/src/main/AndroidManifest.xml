@@ -7,6 +7,8 @@
 
 
 
+
+
     <application
         android:allowBackup="true"
         android:dataExtractionRules="@xml/data_extraction_rules"
@@ -16,16 +18,15 @@
         android:roundIcon="@mipmap/ic_launcher_round"
         android:supportsRtl="true"
         android:theme="@style/Theme.LifeLink">
-        <activity
-            android:name=".DonorHomeActivity"
-            android:exported="false" />
+        <activity android:name=".CompleteDonorProfileActivity"
+            android:exported="false"/>
+        <activity android:name=".AlreadyDonorActivity"
+            android:exported="false"/>
+        <activity android:name=".DonorRegistrationActivity"
+            />
         <activity
             android:name=".PatientHomeActivity"
             android:exported="false" />
-        <activity
-            android:name=".DonorProfileActivity"
-            android:exported="false" />
-
 
         <meta-data
             android:name="com.google.android.geo.API_KEY"
@@ -39,11 +40,12 @@
             android:name=".HomeActivity"
             android:exported="false" />
         <activity
-            android:name=".LoginActivity"
+            android:name=".MainActivity"
             android:exported="false"/>
         <activity
-            android:name=".MainActivity"
+            android:name=".LoginActivity"
             android:exported="true">
+
             <!-- Required for launcher -->
 
             <intent-filter>

@@ -2,6 +2,7 @@ package com.rishikesh.lifelink
 
 import android.content.Intent
 import android.os.Bundle
+import android.util.Log
 import android.widget.Button
 import android.widget.EditText
 import android.widget.TextView
@@ -9,6 +10,8 @@ import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FirebaseFirestore
+import androidx.appcompat.app.AlertDialog
+
 
 class LoginActivity : AppCompatActivity() {
 
@@ -21,18 +24,21 @@ class LoginActivity : AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
-        // ✅ 1. Initialize auth ONCE
         auth = FirebaseAuth.getInstance()
 
-        // ✅ 2. Auto-login check
-        val currentUser = auth.currentUser
-        if (currentUser != null) {
-            redirectUser(currentUser.uid)
+        val user = FirebaseAuth.getInstance().currentUser
+
+        if (user != null) {
+            startActivity(Intent(this, PatientHomeActivity::class.java))
+            finish()
             return
         }
 
-        // ✅ 3. Load UI only if not logged in
+
+
         setContentView(R.layout.activity_login)
+
+        auth = FirebaseAuth.getInstance()
 
         emailEt = findViewById(R.id.emailEt)
         passwordEt = findViewById(R.id.passwordEt)
@@ -48,34 +54,63 @@ class LoginActivity : AppCompatActivity() {
         }
     }
 
-    // 🔁 Used for BOTH auto-login and manual login
-    private fun redirectUser(uid: String) {
-        val db = FirebaseFirestore.getInstance()
 
-        db.collection("Users")
+    // 🔁 Used for BOTH auto-login and manual login
+
+    private fun showRoleChooserDialog() {
+
+        AlertDialog.Builder(this)
+            .setTitle("Choose your role")
+            .setMessage("You can switch roles anytime")
+            .setCancelable(false)
+            .setPositiveButton("Patient") { _, _ ->
+                openPatientMode()
+            }
+            .setNegativeButton("Donor") { _, _ ->
+                openDonorMode()
+            }
+            .show()
+    }
+
+    private fun openPatientMode() {
+        val intent = Intent(this, PatientHomeActivity::class.java)
+        intent.flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
+        startActivity(intent)
+        finish()
+    }
+    private fun openDonorMode() {
+
+        val user = FirebaseAuth.getInstance().currentUser
+        if (user == null) {
+            Toast.makeText(this, "User not logged in", Toast.LENGTH_SHORT).show()
+            return
+        }
+
+        val uid = user.uid
+        Log.d("ROLE_FLOW", "Donor selected, UID = $uid")
+
+        FirebaseFirestore.getInstance()
+            .collection("Users")
             .document(uid)
             .get()
-            .addOnSuccessListener { document ->
+            .addOnSuccessListener { doc ->
 
-                val userType = document.getString("userType")
-
-                val intent = when (userType) {
-                    "Patient" -> Intent(this, PatientHomeActivity::class.java)
-                    "Donor" -> Intent(this, DonorHomeActivity::class.java)
-                    else -> {
-                        FirebaseAuth.getInstance().signOut()
-                        Intent(this, LoginActivity::class.java)
-                    }
+                if (!doc.exists()) {
+                    Log.d("ROLE_FLOW", "User document NOT FOUND")
                 }
+
+                val profileCompleted = doc.getBoolean("profileCompleted") ?: false
+                Log.d("ROLE_FLOW", "profileCompleted = $profileCompleted")
+
+
 
                 intent.flags =
                     Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
-
                 startActivity(intent)
                 finish()
             }
             .addOnFailureListener {
-                FirebaseAuth.getInstance().signOut()
+                Log.e("ROLE_FLOW", "Firestore error", it)
             }
     }
 
@@ -91,7 +126,7 @@ class LoginActivity : AppCompatActivity() {
         auth.signInWithEmailAndPassword(email, pass)
             .addOnSuccessListener {
                 Toast.makeText(this, "Login Successful!", Toast.LENGTH_SHORT).show()
-                redirectUser(auth.currentUser!!.uid)
+                startActivity(Intent(this, PatientHomeActivity::class.java))
             }
             .addOnFailureListener {
                 Toast.makeText(
@@ -101,4 +136,5 @@ class LoginActivity : AppCompatActivity() {
                 ).show()
             }
     }
+
 }

@@ -1,6 +1,6 @@
 package com.rishikesh.lifelink
 
-import Donor
+
 import android.content.Intent
 import android.net.Uri
 import android.view.LayoutInflater
@@ -9,6 +9,7 @@ import android.view.ViewGroup
 import android.widget.ImageButton
 import android.widget.TextView
 import androidx.recyclerview.widget.RecyclerView
+import com.rishikesh.lifelink.model.Donor
 
 class DonorAdapter(
     private val donors: List<Donor>,

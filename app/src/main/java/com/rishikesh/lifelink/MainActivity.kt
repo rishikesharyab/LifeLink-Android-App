@@ -15,41 +15,35 @@ class MainActivity : AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
-        val user = auth.currentUser
+        val user = FirebaseAuth.getInstance().currentUser
+
         if (user == null) {
-            goToLogin()
+            startActivity(Intent(this, LoginActivity::class.java))
+            finish()
             return
         }
 
-        db.collection("Users")
+        FirebaseFirestore.getInstance()
+            .collection("Users")
             .document(user.uid)
             .get()
-            .addOnSuccessListener { document ->
+            .addOnSuccessListener { doc ->
 
-                if (!document.exists()) {
-                    auth.signOut()
-                    goToLogin()
-                    return@addOnSuccessListener
-                }
+                val userType = doc.getString("userType")
 
-                val userType = document.getString("userType")
+                if (userType == "Patient") {
 
-                when (userType) {
-                    "Patient" -> {
-                        startActivity(Intent(this, PatientHomeActivity::class.java))
-                    }
-                    "Donor" -> {
-                        startActivity(Intent(this, DonorHomeActivity::class.java))
-                    }
-                    else -> {
-                        auth.signOut()
-                        Toast.makeText(this, "Invalid user type", Toast.LENGTH_SHORT).show()
-                        goToLogin()
-                    }
+                    val intent = Intent(this, PatientHomeActivity::class.java)
+                    intent.flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
+                    startActivity(intent)
+
+                } else {
+                    startActivity(Intent(this, LoginActivity::class.java))
                 }
 
                 finish()
             }
+
             .addOnFailureListener {
                 auth.signOut()
                 goToLogin()
