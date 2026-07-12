@@ -270,37 +270,7 @@ class PatientHomeActivity : AppCompatActivity(), OnMapReadyCallback {
 
     // ================= LOCATION =================
 
-    private fun enablePatientLocation() {
-        if (ContextCompat.checkSelfPermission(
-                this,
-                Manifest.permission.ACCESS_FINE_LOCATION
-            ) != PackageManager.PERMISSION_GRANTED
-        ) {
-            ActivityCompat.requestPermissions(
-                this,
-                arrayOf(Manifest.permission.ACCESS_FINE_LOCATION),
-                LOCATION_PERMISSION_CODE
-            )
-            return
-        }
 
-        googleMap.isMyLocationEnabled = true
-
-        val fusedLocationClient =
-            LocationServices.getFusedLocationProviderClient(this)
-
-        fusedLocationClient.lastLocation.addOnSuccessListener { location ->
-            if (location != null) {
-                userLat = location.latitude
-                userLng = location.longitude
-
-                val latLng = LatLng(patientLat, patientLng)
-                googleMap.moveCamera(
-                    CameraUpdateFactory.newLatLngZoom(latLng, 14f)
-                )
-            }
-        }
-    }
 
 //    override fun onRequestPermissionsResult(
 //        requestCode: Int,
@@ -418,7 +388,9 @@ class PatientHomeActivity : AppCompatActivity(), OnMapReadyCallback {
                     isAvailable = doc.getBoolean("available") ?: true
                 )
 
-                val sheet = DonorBottomSheetFragment.newInstance(donor, currentLocationText)
+//                val sheet = DonorBottomSheetFragment.newInstance(donor, currentLocationText)
+//                sheet.show(supportFragmentManager, "DonorDashboard")
+                val sheet = DonorBottomSheetFragment.newInstance(donor, currentLocationText, userLat, userLng)
                 sheet.show(supportFragmentManager, "DonorDashboard")
 
                 isDashboardVisible = true
@@ -470,6 +442,7 @@ class PatientHomeActivity : AppCompatActivity(), OnMapReadyCallback {
                 googleMap.animateCamera(CameraUpdateFactory.newLatLngZoom(latLng, 14f))
 
                 getAddressFromLatLng(userLat, userLng)
+                openDonorDashboard()
 
             } else {
                 Log.d("LOCATION_DEBUG", "Location NULL")

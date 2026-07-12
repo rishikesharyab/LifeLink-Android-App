@@ -171,12 +171,14 @@
 
             </LinearLayout>
 
+
             <!-- Badge Card -->
             <LinearLayout
                 android:layout_width="0dp"
                 android:layout_height="wrap_content"
                 android:layout_columnWeight="1"
                 android:layout_marginStart="4dp"
+                android:layout_marginEnd="4dp"
                 android:background="@drawable/bg_badge_card"
                 android:gravity="center"
                 android:orientation="vertical"
@@ -202,8 +204,343 @@
 
             </LinearLayout>
 
+
         </GridLayout>
 
+        <LinearLayout
+            android:id="@+id/llCampSection"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:layout_marginBottom="16dp">
+
+            <!-- Section Header -->
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal"
+                android:gravity="center_vertical"
+                android:layout_marginBottom="10dp">
+
+                <View
+                    android:layout_width="7dp"
+                    android:layout_height="7dp"
+                    android:background="@drawable/bg_live_dot"
+                    android:layout_marginEnd="6dp"/>
+
+                <TextView
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:text="NEARBY BLOOD CAMPS"
+                    android:textSize="11sp"
+                    android:letterSpacing="0.08"
+                    android:textColor="@color/text_secondary"
+                    android:textStyle="bold"/>
+
+            </LinearLayout>
+
+            <!-- Card wrapper (gradient top + white bottom) -->
+            <LinearLayout
+                android:id="@+id/llCampCard"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:background="@drawable/bg_camp_card"
+                android:clipToOutline="true">
+
+                <!-- ── GRADIENT HEADER ── -->
+                <LinearLayout
+                    android:id="@+id/llCampGradientHeader"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:background="@drawable/bg_camp_gradient"
+                    android:orientation="vertical"
+                    android:padding="16dp">
+
+                    <!-- Row 1: NGO name + counter -->
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="horizontal"
+                        android:gravity="center_vertical"
+                        android:layout_marginBottom="10dp">
+
+                        <!-- NGO pill -->
+                        <TextView
+                            android:id="@+id/tvNgoName"
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_weight="1"
+                            android:text="Red Cross India"
+                            android:textSize="11sp"
+                            android:textStyle="bold"
+                            android:textColor="#FFFFFF"
+                            android:background="@drawable/bg_ngo_pill"
+                            android:paddingStart="10dp"
+                            android:paddingEnd="10dp"
+                            android:paddingTop="3dp"
+                            android:paddingBottom="3dp"
+                            android:maxLines="1"
+                            android:ellipsize="end"/>
+
+                        <!-- Spacer -->
+                        <View android:layout_width="8dp" android:layout_height="1dp"/>
+
+                        <!-- Camp counter -->
+                        <TextView
+                            android:id="@+id/tvCampIndicator"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="1 / 3"
+                            android:textSize="11sp"
+                            android:textColor="#CCFFFFFF"/>
+
+                        <!-- Distance chip -->
+                        <TextView
+                            android:id="@+id/tvCampDistance"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="2.4 km"
+                            android:textSize="11sp"
+                            android:textStyle="bold"
+                            android:textColor="#FFFFFF"
+                            android:background="@drawable/bg_distance_chip_white"
+                            android:paddingStart="10dp"
+                            android:paddingEnd="10dp"
+                            android:paddingTop="3dp"
+                            android:paddingBottom="3dp"
+                            android:layout_marginStart="8dp"/>
+
+                    </LinearLayout>
+
+                    <!-- Camp name -->
+                    <TextView
+                        android:id="@+id/tvCampName"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:text="LifeSave Blood Drive 2025"
+                        android:textSize="17sp"
+                        android:textStyle="bold"
+                        android:textColor="#FFFFFF"
+                        android:layout_marginBottom="12dp"/>
+
+                    <!-- Info chips row -->
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="horizontal">
+
+                        <!-- Location chip -->
+                        <LinearLayout
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:orientation="horizontal"
+                            android:gravity="center_vertical"
+                            android:background="@drawable/bg_info_chip"
+                            android:paddingStart="8dp"
+                            android:paddingEnd="8dp"
+                            android:paddingTop="4dp"
+                            android:paddingBottom="4dp"
+                            android:layout_marginEnd="6dp">
+
+                            <ImageView
+                                android:layout_width="12dp"
+                                android:layout_height="12dp"
+                                android:src="@android:drawable/ic_menu_mylocation"
+                                android:layout_marginEnd="4dp"/>
+
+                            <TextView
+                                android:id="@+id/tvCampLocation"
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:text="Andheri, Mumbai"
+                                android:textSize="11sp"
+                                android:textColor="#FFFFFF"
+                                android:maxLines="1"
+                                android:ellipsize="end"/>
+
+                        </LinearLayout>
+
+                        <!-- Time chip -->
+                        <LinearLayout
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:orientation="horizontal"
+                            android:gravity="center_vertical"
+                            android:background="@drawable/bg_info_chip"
+                            android:paddingStart="8dp"
+                            android:paddingEnd="8dp"
+                            android:paddingTop="4dp"
+                            android:paddingBottom="4dp"
+                            android:layout_marginEnd="6dp">
+
+                            <ImageView
+                                android:layout_width="12dp"
+                                android:layout_height="12dp"
+                                android:src="@android:drawable/ic_menu_recent_history"
+                                android:layout_marginEnd="4dp"/>
+
+                            <TextView
+                                android:id="@+id/tvCampTime"
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:text="9AM – 5PM"
+                                android:textSize="11sp"
+                                android:textColor="#FFFFFF"/>
+
+                        </LinearLayout>
+
+                        <!-- Date chip -->
+                        <LinearLayout
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:orientation="horizontal"
+                            android:gravity="center_vertical"
+                            android:background="@drawable/bg_info_chip"
+                            android:paddingStart="8dp"
+                            android:paddingEnd="8dp"
+                            android:paddingTop="4dp"
+                            android:paddingBottom="4dp">
+
+                            <ImageView
+                                android:layout_width="12dp"
+                                android:layout_height="12dp"
+                                android:src="@android:drawable/ic_menu_today"
+                                android:layout_marginEnd="4dp"/>
+
+                            <TextView
+                                android:id="@+id/tvCampDate"
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:text="25 Jan 2025"
+                                android:textSize="11sp"
+                                android:textColor="#FFFFFF"/>
+
+                        </LinearLayout>
+
+                    </LinearLayout>
+
+                </LinearLayout>
+
+                <!-- ── WHITE BOTTOM SECTION ── -->
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="horizontal"
+                    android:gravity="center_vertical"
+                    android:background="@drawable/bg_ngo_pill"
+                    android:paddingStart="14dp"
+                    android:paddingEnd="14dp"
+                    android:paddingTop="10dp"
+                    android:paddingBottom="10dp">
+
+                    <!-- Dot indicators -->
+                    <LinearLayout
+                        android:id="@+id/llDotIndicators"
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:orientation="horizontal"
+                        android:gravity="center_vertical"/>
+
+                    <!-- Register button -->
+                    <TextView
+                        android:id="@+id/btnRegisterCamp"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="Register now →"
+                        android:textSize="13sp"
+                        android:textStyle="bold"
+                        android:textColor="#FFFFFF"
+                        android:background="@drawable/bg_register_btn"
+                        android:paddingStart="16dp"
+                        android:paddingEnd="16dp"
+                        android:paddingTop="8dp"
+                        android:paddingBottom="8dp"/>
+
+                </LinearLayout>
+
+            </LinearLayout>
+
+            <!-- No camps message -->
+            <TextView
+                android:id="@+id/tvNoCamps"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="No active camps within 10 km"
+                android:textSize="13sp"
+                android:textColor="@color/text_secondary"
+                android:gravity="center"
+                android:padding="16dp"
+                android:background="@drawable/bg_stat_card"
+                android:visibility="gone"/>
+
+
+
+        </LinearLayout>
+
+        <!-- ── NGO REGISTRATION CARD ── -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:background="@drawable/bg_ngo_card"
+            android:orientation="horizontal"
+            android:gravity="center_vertical"
+            android:padding="14dp"
+            android:layout_marginBottom="16dp">
+
+            <!-- Left: Icon -->
+            <TextView
+                android:layout_width="44dp"
+                android:layout_height="44dp"
+                android:text="🏥"
+                android:textSize="22sp"
+                android:gravity="center"
+                android:background="@drawable/bg_avatar"
+                android:layout_marginEnd="12dp"/>
+
+            <!-- Middle: Text -->
+            <LinearLayout
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:orientation="vertical">
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Are you an NGO?"
+                    android:textSize="14sp"
+                    android:textStyle="bold"
+                    android:textColor="@color/text_primary"/>
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Register your organization &amp; post blood camps"
+                    android:textSize="12sp"
+                    android:textColor="@color/text_secondary"
+                    android:layout_marginTop="2dp"/>
+
+            </LinearLayout>
+
+            <!-- Right: Arrow -->
+            <TextView
+                android:id="@+id/btnNgoRegister"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Join →"
+                android:textSize="12sp"
+                android:textStyle="bold"
+                android:textColor="#FFFFFF"
+                android:background="@drawable/bg_register_btn"
+                android:paddingStart="12dp"
+                android:paddingEnd="12dp"
+                android:paddingTop="6dp"
+                android:paddingBottom="6dp"/>
+
+        </LinearLayout>
         <!-- ── DIVIDER ── -->
         <View
             android:layout_width="match_parent"

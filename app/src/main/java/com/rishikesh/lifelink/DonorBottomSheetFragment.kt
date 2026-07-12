@@ -1,10 +1,12 @@
 package com.rishikesh.lifelink
 
+import android.content.Intent
 import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import android.widget.EditText
+import android.widget.LinearLayout
 import android.widget.TextView
 import com.rishikesh.lifelink.R
 import com.rishikesh.lifelink.model.Donor
@@ -13,6 +15,8 @@ import com.google.android.material.switchmaterial.SwitchMaterial
 import java.text.SimpleDateFormat
 import java.util.Calendar
 import java.util.Locale
+import kotlin.jvm.java
+import com.rishikesh.lifelink.model.BloodCamp
 
 class DonorBottomSheetFragment : BottomSheetDialogFragment() {
 
@@ -23,15 +27,25 @@ class DonorBottomSheetFragment : BottomSheetDialogFragment() {
         private const val DONATION_INTERVAL_MONTHS = 3
 
         // ✅ FIXED newInstance (NOW ACCEPTS LOCATION)
-        fun newInstance(donor: Donor, location: String): DonorBottomSheetFragment {
+        fun newInstance(donor: Donor, location: String, userLat: Double = 0.0, userLng: Double = 0.0): DonorBottomSheetFragment {
             return DonorBottomSheetFragment().apply {
                 arguments = Bundle().apply {
                     putParcelable(ARG_DONOR, donor)
                     putString(ARG_LOCATION, location)
+                    putDouble("userLat", userLat)
+                    putDouble("userLng", userLng)
                 }
             }
         }
     }
+
+
+    private val nearbyCamps      = mutableListOf<BloodCamp>()
+    private var currentCampIndex = 0
+    private val carouselHandler  = android.os.Handler(android.os.Looper.getMainLooper())
+    private val CAROUSEL_DELAY   = 4000L
+    private val MAX_DISTANCE_KM  = 10.0
+
 
     // Views
     private lateinit var tvAvatar: TextView
@@ -46,6 +60,21 @@ class DonorBottomSheetFragment : BottomSheetDialogFragment() {
     private lateinit var tvNextEligible: TextView
     private lateinit var tvAvailabilitySubtitle: TextView
     private lateinit var switchAvailability: SwitchMaterial
+
+    private lateinit var llCampCard       : LinearLayout
+    private lateinit var llCampGradient   : LinearLayout
+    private lateinit var llDotIndicators  : LinearLayout
+    private lateinit var tvNoCamps        : TextView
+    private lateinit var tvCampName       : TextView
+    private lateinit var tvNgoName        : TextView
+    private lateinit var tvCampDate       : TextView
+    private lateinit var tvCampLocation   : TextView
+    private lateinit var tvCampTime       : TextView
+    private lateinit var tvCampDistance   : TextView
+    private lateinit var tvCampIndicator  : TextView
+    private lateinit var btnRegisterCamp  : TextView
+
+
 
     override fun onCreateView(
         inflater: LayoutInflater,
@@ -64,6 +93,10 @@ class DonorBottomSheetFragment : BottomSheetDialogFragment() {
 
         val donor = arguments?.getParcelable<Donor>(ARG_DONOR)
         if (donor != null) populateUi(donor) else dismiss()
+
+        val userLat = arguments?.getDouble("userLat") ?: 0.0
+        val userLng = arguments?.getDouble("userLng") ?: 0.0
+        loadUpcomingCamps(userLat, userLng)
     }
 
     private fun bindViews(root: View) {
@@ -79,6 +112,23 @@ class DonorBottomSheetFragment : BottomSheetDialogFragment() {
         tvNextEligible         = root.findViewById(R.id.tvNextEligible)
         tvAvailabilitySubtitle = root.findViewById(R.id.tvAvailabilitySubtitle)
         switchAvailability     = root.findViewById(R.id.switchAvailability)
+
+        llCampCard      = root.findViewById(R.id.llCampCard)
+        llCampGradient  = root.findViewById(R.id.llCampGradientHeader)
+        llDotIndicators = root.findViewById(R.id.llDotIndicators)
+        tvNoCamps       = root.findViewById(R.id.tvNoCamps)
+        tvCampName      = root.findViewById(R.id.tvCampName)
+        tvNgoName       = root.findViewById(R.id.tvNgoName)
+        tvCampDate      = root.findViewById(R.id.tvCampDate)
+        tvCampLocation  = root.findViewById(R.id.tvCampLocation)
+        tvCampTime      = root.findViewById(R.id.tvCampTime)
+        tvCampDistance  = root.findViewById(R.id.tvCampDistance)
+        tvCampIndicator = root.findViewById(R.id.tvCampIndicator)
+        btnRegisterCamp = root.findViewById(R.id.btnRegisterCamp)
+
+        root.findViewById<TextView>(R.id.btnNgoRegister).setOnClickListener {
+            startActivity(Intent(requireContext(), NgoRegistrationActivity::class.java))
+        }
     }
 
     private fun populateUi(donor: Donor) {
@@ -139,6 +189,184 @@ class DonorBottomSheetFragment : BottomSheetDialogFragment() {
         super.onDismiss(dialog)
         (activity as? PatientHomeActivity)?.isDashboardVisible = false
     }
+
+    // ── 5. Add onDestroyView() to stop carousel when sheet closes
+
+    override fun onDestroyView() {
+        super.onDestroyView()
+        carouselHandler.removeCallbacksAndMessages(null)
+    }
+
+    // ── 6. Main camp loading function
+    private fun loadUpcomingCamps(userLat: Double, userLng: Double) {
+        val db  = com.google.firebase.firestore.FirebaseFirestore.getInstance()
+
+        android.util.Log.d("CAMP_DEBUG", "Fetching camps... userLat=$userLat userLng=$userLng")
+
+        db.collection("BloodCamps")
+            .get()
+            .addOnSuccessListener { documents ->
+
+                android.util.Log.d("CAMP_DEBUG", "Total docs found: ${documents.size()}")
+
+                nearbyCamps.clear()
+
+                for (doc in documents) {
+                    android.util.Log.d("CAMP_DEBUG", "Doc: ${doc.id} data: ${doc.data}")
+
+                    val campLat = doc.getDouble("latitude")  ?: continue
+                    val campLng = doc.getDouble("longitude") ?: continue
+
+                    val results = FloatArray(1)
+                    android.location.Location.distanceBetween(
+                        userLat, userLng, campLat, campLng, results
+                    )
+                    val distKm = results[0] / 1000.0
+
+                    android.util.Log.d("CAMP_DEBUG", "Camp: ${doc.getString("campName")} distKm=$distKm")
+
+                    if (distKm > MAX_DISTANCE_KM) {
+                        android.util.Log.d("CAMP_DEBUG", "Skipped — too far: $distKm km")
+                        continue
+                    }
+
+                    nearbyCamps.add(
+                        BloodCamp(
+                            campId            = doc.id,
+                            campName          = doc.getString("campName")          ?: "",
+                            ngoName           = doc.getString("ngoName")           ?: "",
+                            date              = doc.getString("date")              ?: "",
+                            location          = doc.getString("location")          ?: "",
+                            latitude          = campLat,
+                            longitude         = campLng,
+                            startTime         = doc.getString("startTime")         ?: "",
+                            endTime           = doc.getString("endTime")           ?: "",
+                            endTimeMillis     = doc.getLong("endTimeMillis")       ?: 0L,
+                            distanceKm        = distKm,
+                            contactName       = doc.getString("contact_name")      ?: "",
+                            designation       = doc.getString("designation")       ?: "",
+                            phone             = doc.getString("phone")             ?: "",
+                            email             = doc.getString("email")             ?: "",
+                            bloodGroupsNeeded = (doc.get("blood_groups_needed") as? List<String>) ?: emptyList(),
+                            facilities        = (doc.get("facilities")            as? List<String>) ?: emptyList(),
+                            registeredBy      = (doc.get("registeredBy")          as? List<String>) ?: emptyList()
+                        )
+                    )
+                }
+
+                android.util.Log.d("CAMP_DEBUG", "Nearby camps count: ${nearbyCamps.size}")
+
+                if (nearbyCamps.isEmpty()) {
+                    llCampCard.visibility = View.GONE
+                    tvNoCamps.visibility  = View.VISIBLE
+                } else {
+                    llCampCard.visibility = View.VISIBLE
+                    tvNoCamps.visibility  = View.GONE
+                    buildDots()
+                    showCamp(0, userLat, userLng)
+                    if (nearbyCamps.size > 1) startCarousel(userLat, userLng)
+                }
+            }
+            .addOnFailureListener { e ->
+                android.util.Log.e("CAMP_DEBUG", "Failed to fetch camps: ${e.message}")
+                llCampCard.visibility = View.GONE
+                tvNoCamps.visibility  = View.VISIBLE
+            }
+    }
+
+    // ── 7. Show a single camp with fade animation
+
+    private fun showCamp(index: Int, userLat: Double, userLng: Double) {
+        val camp = nearbyCamps[index]
+
+        val results = FloatArray(1)
+        android.location.Location.distanceBetween(
+            userLat, userLng, camp.latitude, camp.longitude, results
+        )
+        val distKm = results[0] / 1000.0
+
+        // Fade out
+        llCampCard.animate().alpha(0f).setDuration(250).withEndAction {
+
+            tvCampName.text      = camp.campName
+            tvNgoName.text       = camp.ngoName
+            tvCampDate.text      = camp.date
+            tvCampLocation.text  = camp.location
+            tvCampTime.text      = "${camp.startTime} – ${camp.endTime}"
+            tvCampDistance.text  = "%.1f km".format(distKm)
+            tvCampIndicator.text = "${index + 1} / ${nearbyCamps.size}"
+
+            updateDots(index)
+
+            btnRegisterCamp.setOnClickListener {
+                val intent = android.content.Intent(requireContext(), CampDetailActivity::class.java)
+                intent.putExtra("camp", camp)
+                startActivity(intent)
+            }
+
+            // Fade in
+            llCampCard.animate().alpha(1f).setDuration(250).start()
+
+        }.start()
+    }
+
+    // ── 8. Dot indicator builder
+
+    private fun buildDots() {
+        llDotIndicators.removeAllViews()
+        val dp = resources.displayMetrics.density
+
+        nearbyCamps.forEachIndexed { i, _ ->
+            val dot = android.view.View(requireContext())
+            val params = LinearLayout.LayoutParams(
+                if (i == 0) (18 * dp).toInt() else (7 * dp).toInt(),
+                (7 * dp).toInt()
+            ).apply { marginEnd = (6 * dp).toInt() }
+            dot.layoutParams = params
+            dot.background = if (i == 0)
+                resources.getDrawable(R.drawable.bg_dot_active, null)
+            else
+                resources.getDrawable(R.drawable.bg_dot_inactive, null)
+            dot.tag = "dot_$i"
+            llDotIndicators.addView(dot)
+        }
+    }
+
+    private fun updateDots(activeIndex: Int) {
+        val dp = resources.displayMetrics.density
+
+        for (i in 0 until llDotIndicators.childCount) {
+            val dot    = llDotIndicators.getChildAt(i)
+            val params = dot.layoutParams as LinearLayout.LayoutParams
+            if (i == activeIndex) {
+                params.width = (18 * dp).toInt()
+                dot.background = resources.getDrawable(R.drawable.bg_dot_active, null)
+            } else {
+                params.width = (7 * dp).toInt()
+                dot.background = resources.getDrawable(R.drawable.bg_dot_inactive, null)
+            }
+            dot.layoutParams = params
+        }
+    }
+
+    // ── 9. Carousel runner
+
+    private fun startCarousel(userLat: Double, userLng: Double) {
+        carouselHandler.removeCallbacksAndMessages(null)
+
+        val runnable = object : Runnable {
+            override fun run() {
+                currentCampIndex = (currentCampIndex + 1) % nearbyCamps.size
+                showCamp(currentCampIndex, userLat, userLng)
+                carouselHandler.postDelayed(this, CAROUSEL_DELAY)
+            }
+        }
+
+        carouselHandler.postDelayed(runnable, CAROUSEL_DELAY)
+    }
+
+
+
 }
 
 // Badge logic
