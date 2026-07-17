@@ -4,6 +4,7 @@ package com.rishikesh.lifelink
 import android.Manifest
 import android.content.Intent
 import android.content.pm.PackageManager
+import android.content.res.ColorStateList
 import android.location.Geocoder
 import android.os.Bundle
 import android.os.Handler
@@ -32,6 +33,8 @@ import com.google.android.gms.maps.model.LatLng
 import com.google.android.gms.maps.model.MarkerOptions
 import com.google.android.material.bottomnavigation.BottomNavigationView
 import com.google.android.material.bottomsheet.BottomSheetBehavior
+import com.google.android.material.chip.Chip
+import com.google.android.material.chip.ChipGroup
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FirebaseFirestore
 import com.rishikesh.lifelink.model.Donor
@@ -43,10 +46,10 @@ class PatientHomeActivity : AppCompatActivity(), OnMapReadyCallback {
     private val LOCATION_PERMISSION_CODE = 1001
 
     private lateinit var googleMap: GoogleMap
-    private lateinit var searchView: SearchView
     private lateinit var bottomSheetBehavior: BottomSheetBehavior<LinearLayout>
 
     private lateinit var donorRecyclerView: RecyclerView
+    private lateinit var tvNoDonors: TextView
     private lateinit var donorAdapter: DonorAdapter
     private val donorList = mutableListOf<Donor>()
 
@@ -61,6 +64,14 @@ class PatientHomeActivity : AppCompatActivity(), OnMapReadyCallback {
     private var donorDashboardShown = false
     var isDashboardVisible = false
     private var isDonorListVisible = false
+    private var isSearchExpanded = false
+
+    private lateinit var etSearch: EditText
+    private lateinit var ivClearSearch: ImageView
+    private lateinit var ivSearchIcon: ImageView
+    private lateinit var ivBackSearch: ImageView
+    private lateinit var bloodGroupScroll: View
+    private lateinit var chipGroup: ChipGroup
 
     private var currentLocationText: String = ""
 
@@ -78,7 +89,12 @@ class PatientHomeActivity : AppCompatActivity(), OnMapReadyCallback {
         nav.bringToFront()
         nav.invalidate()
         nav.requestLayout()
-       // dialog?.window?.clearFlags(android.view.WindowManager.LayoutParams.FLAG_DIM_BEHIND)
+
+        val searchContainerView = findViewById<View>(R.id.searchContainer)
+        searchContainerView.bringToFront()
+        searchContainerView.invalidate()
+        searchContainerView.requestLayout()
+        // dialog?.window?.clearFlags(android.view.WindowManager.LayoutParams.FLAG_DIM_BEHIND)
 
         fusedLocationClient = LocationServices.getFusedLocationProviderClient(this)
 
@@ -91,13 +107,19 @@ class PatientHomeActivity : AppCompatActivity(), OnMapReadyCallback {
 
             when {
 
-                // If donor list is open → close it
+                // If donor list is open → it's the topmost view, so close it first
                 isDonorListVisible -> {
 
                     bottomSheetBehavior.state = BottomSheetBehavior.STATE_HIDDEN
                     isDonorListVisible = false
 
                     openDonorDashboard()   // show dashboard again
+                }
+
+                // If search is expanded → collapse it and show the home dashboard
+                isSearchExpanded || bloodGroupScroll.visibility == View.VISIBLE -> {
+                    collapseSearch()
+                    openDonorDashboard()
                 }
 
                 // If dashboard visible → exit app
@@ -110,21 +132,149 @@ class PatientHomeActivity : AppCompatActivity(), OnMapReadyCallback {
             }
         }
 
-        // 🔍 SearchView
-        searchView = findViewById(R.id.searchView)
-        searchView.queryHint = "Search blood group (A+, O-, etc)"
+        // 🔍 SEARCH BAR + BLOOD GROUP CHIPS
+        val bloodGroups = listOf("A+", "A-", "B+", "B-", "O+", "O-", "AB+", "AB-")
+        chipGroup = findViewById(R.id.chipGroupBloodGroups)
+        etSearch = findViewById(R.id.etSearch)
+        ivClearSearch = findViewById(R.id.ivClearSearch)
+        ivSearchIcon = findViewById(R.id.ivSearchIcon)
+        ivBackSearch = findViewById(R.id.ivBackSearch)
+        bloodGroupScroll = findViewById(R.id.bloodGroupScroll)
+
+        var isSyncingFromChip = false
+        var isSyncingFromText = false
+
+        // Explicitly force focus + keyboard on tap. Relying only on the implicit
+        // touch→focus path was flaky here because the full-screen map fragment
+        // sits underneath and sometimes wins the first touch event.
+        val focusAndShowKeyboard = View.OnClickListener {
+            etSearch.requestFocus()
+            val imm = getSystemService(android.content.Context.INPUT_METHOD_SERVICE)
+                    as android.view.inputmethod.InputMethodManager
+            imm.showSoftInput(etSearch, android.view.inputmethod.InputMethodManager.SHOW_IMPLICIT)
+        }
+        searchContainerView.setOnClickListener(focusAndShowKeyboard)
+        etSearch.setOnClickListener(focusAndShowKeyboard)
+
+        ivBackSearch.setOnClickListener {
+            collapseSearch()
+            openDonorDashboard()
+        }
+
+        bloodGroups.forEach { group ->
+            val chip = Chip(this).apply {
+                text        = group
+                isCheckable = true
+                chipBackgroundColor = ColorStateList(
+                    arrayOf(intArrayOf(android.R.attr.state_checked), intArrayOf()),
+                    intArrayOf(
+                        resources.getColor(R.color.coral_50, null),
+                        resources.getColor(R.color.surface_secondary, null)
+                    )
+                )
+                setTextColor(
+                    ColorStateList(
+                        arrayOf(intArrayOf(android.R.attr.state_checked), intArrayOf()),
+                        intArrayOf(
+                            resources.getColor(R.color.coral_800, null),
+                            resources.getColor(R.color.text_secondary, null)
+                        )
+                    )
+                )
+            }
+            chipGroup.addView(chip)
+        }
+
+        // Chip tapped → reflect it in the search text and run the search
+        chipGroup.setOnCheckedStateChangeListener { group, checkedIds ->
+            if (checkedIds.isEmpty()) return@setOnCheckedStateChangeListener
+
+            val chip = group.findViewById<Chip>(checkedIds[0])
+            val group_ = chip.text.toString()
+
+            if (!isSyncingFromText) {
+                isSyncingFromChip = true
+                etSearch.setText(group_)
+                etSearch.setSelection(etSearch.text.length)
+                isSyncingFromChip = false
+            }
+
+            // Close the keyboard as soon as a filter is picked — the chip row stays open
+            etSearch.clearFocus()
+            hideKeyboard(etSearch)
+
+            searchDonors(group_)
+        }
+
+        // Typing a blood group → auto-select the matching chip
+        etSearch.addTextChangedListener(object : android.text.TextWatcher {
+            override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {}
+            override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {}
+
+            override fun afterTextChanged(s: android.text.Editable?) {
+                if (isSyncingFromChip) return
+
+                val query = s?.toString()?.trim().orEmpty()
+                ivClearSearch.visibility = if (query.isEmpty()) View.GONE else View.VISIBLE
+
+                val normalized = normalizeBloodGroupQuery(query)
+                val matchedGroup = bloodGroups.firstOrNull { it.equals(normalized, ignoreCase = true) }
+
+                isSyncingFromText = true
+                if (matchedGroup != null) {
+                    for (i in 0 until chipGroup.childCount) {
+                        val chip = chipGroup.getChildAt(i) as Chip
+                        chip.isChecked = chip.text.toString() == matchedGroup
+                    }
+                } else {
+                    chipGroup.clearCheck()
+                }
+                isSyncingFromText = false
+            }
+        })
+
+        // Focus → expand the chip row and swap the icon to a back arrow.
+        // Blur → swap icon back; only collapse the row if no chip is selected.
+        etSearch.setOnFocusChangeListener { _, hasFocus ->
+            if (hasFocus) {
+                isSearchExpanded = true
+                ivSearchIcon.visibility = View.GONE
+                ivBackSearch.visibility = View.VISIBLE
+
+                bloodGroupScroll.visibility = View.VISIBLE
+                bloodGroupScroll.alpha = 0f
+                bloodGroupScroll.animate().alpha(1f).setDuration(150).start()
+            } else {
+                if (chipGroup.checkedChipId == View.NO_ID) {
+                    // Nothing selected — fully collapse and go back to the plain search icon
+                    collapseSearch()
+                } else {
+                    // A filter is still active — keep the row expanded and the back arrow showing
+                    hideKeyboard(etSearch)
+                }
+            }
+        }
+
+        // Clear button → reset text, chip selection, and results
+        ivClearSearch.setOnClickListener {
+            etSearch.setText("")
+            chipGroup.clearCheck()
+            ivClearSearch.visibility = View.GONE
+        }
 
         // ⬆️ Bottom Sheet
         val bottomSheet = findViewById<LinearLayout>(R.id.bottomSheet)
         bottomSheetBehavior = BottomSheetBehavior.from(bottomSheet)
         bottomSheetBehavior.peekHeight = 380
         bottomSheetBehavior.isHideable = true
+        bottomSheetBehavior.isDraggable = false
         bottomSheetBehavior.state = BottomSheetBehavior.STATE_HIDDEN
 
 
         // 📋 RecyclerView
         donorRecyclerView = findViewById(R.id.donorRecyclerView)
         donorRecyclerView.layoutManager = LinearLayoutManager(this)
+        tvNoDonors = findViewById(R.id.tvNoDonors)
 
         donorAdapter = DonorAdapter(donorList) { donor ->
             val latLng = LatLng(donor.latitude, donor.longitude)
@@ -205,68 +355,44 @@ class PatientHomeActivity : AppCompatActivity(), OnMapReadyCallback {
             googleMap.isMyLocationEnabled = true
         }
 
+        // If the location callback already fired before the map was ready, catch up now
+        if (userLat != 0.0 || userLng != 0.0) {
+            googleMap.animateCamera(
+                CameraUpdateFactory.newLatLngZoom(LatLng(userLat, userLng), 14f)
+            )
+        }
+
         // 🔍 Search action
-        searchView.setOnQueryTextListener(object : SearchView.OnQueryTextListener {
 
-            override fun onQueryTextSubmit(query: String?): Boolean {
-
-
-//                val bloodGroup = query?.trim()?.uppercase() ?: return false
-
-                val bloodGroup = query
-                    ?.replace(" ", "")
-                    ?.uppercase()
-                    ?: return false
-
-                // 👉 Hide dashboard ONLY here
-                val fragment = supportFragmentManager.findFragmentByTag("DonorDashboard")
-                if (fragment is DonorBottomSheetFragment) {
-                    fragment.dismiss()
-                }
-
-                isDashboardVisible = false
-                isDonorListVisible = true
-
-                searchDonors(bloodGroup)
-
-                searchView.clearFocus()
-
-                return true
-            }
-
-            override fun onQueryTextChange(newText: String?): Boolean {
-                return false
-            }
-        })
     }
 
-     //Bottom Nav bar
-     private fun selectTab(
-         selected: LinearLayout,
-         other: LinearLayout,
-         homeIcon: ImageView,
-         donateIcon: ImageView,
-         homeText: TextView,
-         donateText: TextView
-     ) {
+    //Bottom Nav bar
+    private fun selectTab(
+        selected: LinearLayout,
+        other: LinearLayout,
+        homeIcon: ImageView,
+        donateIcon: ImageView,
+        homeText: TextView,
+        donateText: TextView
+    ) {
 
-         if (selected.id == R.id.navHome) {
+        if (selected.id == R.id.navHome) {
 
-             homeIcon.setImageResource(R.drawable.ic_home) // active
-             donateIcon.setImageResource(R.drawable.outline_donor_heart)
+            homeIcon.setImageResource(R.drawable.ic_home) // active
+            donateIcon.setImageResource(R.drawable.outline_donor_heart)
 
-             homeText.setTextColor(getColor(R.color.black))
-             donateText.setTextColor(getColor(R.color.gray))
+            homeText.setTextColor(getColor(R.color.black))
+            donateText.setTextColor(getColor(R.color.gray))
 
-         } else {
+        } else {
 
-             homeIcon.setImageResource(R.drawable.ic_home)
-             donateIcon.setImageResource(R.drawable.outline_donor_heart)
+            homeIcon.setImageResource(R.drawable.ic_home)
+            donateIcon.setImageResource(R.drawable.outline_donor_heart)
 
-             homeText.setTextColor(getColor(R.color.gray))
-             donateText.setTextColor(getColor(R.color.black))
-         }
-     }
+            homeText.setTextColor(getColor(R.color.gray))
+            donateText.setTextColor(getColor(R.color.black))
+        }
+    }
 
     // ================= LOCATION =================
 
@@ -315,11 +441,6 @@ class PatientHomeActivity : AppCompatActivity(), OnMapReadyCallback {
 
                 Log.d("SEARCH_DEBUG", "Docs size: ${documents.size()}")
 
-                if (documents.isEmpty) {
-                    Toast.makeText(this, "No donors found", Toast.LENGTH_SHORT).show()
-                    return@addOnSuccessListener
-                }
-
                 for (doc in documents) {
 
                     val lat = doc.getDouble("latitude") ?: continue
@@ -347,7 +468,17 @@ class PatientHomeActivity : AppCompatActivity(), OnMapReadyCallback {
 
                 donorAdapter.notifyDataSetChanged()
 
+                if (donorList.isEmpty()) {
+                    donorRecyclerView.visibility = View.GONE
+                    tvNoDonors.visibility = View.VISIBLE
+                } else {
+                    donorRecyclerView.visibility = View.VISIBLE
+                    tvNoDonors.visibility = View.GONE
+                }
+
                 bottomSheetBehavior.state = BottomSheetBehavior.STATE_EXPANDED
+                isDonorListVisible = true
+                isDashboardVisible = false
             }
     }
 
@@ -403,8 +534,10 @@ class PatientHomeActivity : AppCompatActivity(), OnMapReadyCallback {
 
         Handler(Looper.getMainLooper()).postDelayed({
 
-            val latLng = LatLng(userLat, userLng)
-            googleMap.animateCamera(CameraUpdateFactory.newLatLngZoom(latLng, 14f))
+            if (::googleMap.isInitialized) {
+                val latLng = LatLng(userLat, userLng)
+                googleMap.animateCamera(CameraUpdateFactory.newLatLngZoom(latLng, 14f))
+            }
 
         }, 500)
 
@@ -437,9 +570,11 @@ class PatientHomeActivity : AppCompatActivity(), OnMapReadyCallback {
 
                 Log.d("LOCATION_DEBUG", "Lat: $userLat")
 
-                // Move map to correct location
-                val latLng = LatLng(userLat, userLng)
-                googleMap.animateCamera(CameraUpdateFactory.newLatLngZoom(latLng, 14f))
+                // Move map to correct location — only if the map has finished loading
+                if (::googleMap.isInitialized) {
+                    val latLng = LatLng(userLat, userLng)
+                    googleMap.animateCamera(CameraUpdateFactory.newLatLngZoom(latLng, 14f))
+                }
 
                 getAddressFromLatLng(userLat, userLng)
                 openDonorDashboard()
@@ -466,7 +601,7 @@ class PatientHomeActivity : AppCompatActivity(), OnMapReadyCallback {
                 val city = address.locality ?: address.subAdminArea ?: ""
                 val state = address.adminArea ?: ""
                 val sector = address.subLocality ?: ""
-             // For Sector and distric
+                // For Sector and distric
                 val fullLocation = when {
                     sector.isNotEmpty() -> "$sector, $city"
                     city.isNotEmpty() -> "$city, $state"
@@ -533,6 +668,65 @@ class PatientHomeActivity : AppCompatActivity(), OnMapReadyCallback {
     }
 
 
+
+    // ================= SEARCH COLLAPSE =================
+
+    /** Collapses the chip row, clears focus/keyboard, and restores the search icon. */
+    private fun collapseSearch() {
+        etSearch.clearFocus()
+        hideKeyboard(etSearch)
+        ivBackSearch.visibility = View.GONE
+        ivSearchIcon.visibility = View.VISIBLE
+        isSearchExpanded = false
+
+        bloodGroupScroll.animate().alpha(0f).setDuration(150)
+            .withEndAction { bloodGroupScroll.visibility = View.GONE }
+            .start()
+    }
+
+    // ================= KEYBOARD =================
+
+    private fun hideKeyboard(view: View) {
+        val imm = getSystemService(android.content.Context.INPUT_METHOD_SERVICE)
+                as android.view.inputmethod.InputMethodManager
+        imm.hideSoftInputFromWindow(view.windowToken, 0)
+    }
+
+    // ================= SEARCH TEXT NORMALIZATION =================
+
+    /**
+     * Lets the user type "b+", "B Positive", "b pos", "o-", "O Negative" etc.
+     * and still match the canonical "B+" / "O-" chip labels.
+     */
+    private fun normalizeBloodGroupQuery(raw: String): String {
+        var q = raw.trim().lowercase(Locale.getDefault())
+        if (q.isEmpty()) return ""
+
+        q = q.replace("blood group", "")
+            .replace("group", "")
+            .replace("type", "")
+            .trim()
+
+        val isNegative = q.contains("-") || q.contains("neg")
+        val isPositive = q.contains("+") || q.contains("pos")
+
+        val letters = q.replace(Regex("[^ab]"), "")
+        val group = when {
+            letters.contains("a") && letters.contains("b") -> "AB"
+            letters.contains("a") -> "A"
+            letters.contains("b") -> "B"
+            q.startsWith("o") -> "O"
+            else -> return ""
+        }
+
+        val sign = when {
+            isPositive -> "+"
+            isNegative -> "-"
+            else -> return ""
+        }
+
+        return "$group$sign"
+    }
 
     // ================= DISTANCE =================
 

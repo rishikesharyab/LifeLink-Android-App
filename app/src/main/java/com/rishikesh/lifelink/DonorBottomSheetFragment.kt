@@ -277,6 +277,7 @@ class DonorBottomSheetFragment : BottomSheetDialogFragment() {
     // ── 7. Show a single camp with fade animation
 
     private fun showCamp(index: Int, userLat: Double, userLng: Double) {
+        if (!isAdded || view == null) return
         val camp = nearbyCamps[index]
 
         val results = FloatArray(1)
@@ -285,8 +286,8 @@ class DonorBottomSheetFragment : BottomSheetDialogFragment() {
         )
         val distKm = results[0] / 1000.0
 
-        // Fade out
         llCampCard.animate().alpha(0f).setDuration(250).withEndAction {
+            if (!isAdded || view == null) return@withEndAction
 
             tvCampName.text      = camp.campName
             tvNgoName.text       = camp.ngoName
@@ -304,10 +305,28 @@ class DonorBottomSheetFragment : BottomSheetDialogFragment() {
                 startActivity(intent)
             }
 
-            // Fade in
-            llCampCard.animate().alpha(1f).setDuration(250).start()
-
+            if (isAdded && view != null) {
+                llCampCard.animate().alpha(1f).setDuration(250).start()
+            }
         }.start()
+    }
+
+    private fun updateDots(activeIndex: Int) {
+        if (!isAdded || view == null) return
+        val dp = resources.displayMetrics.density
+
+        for (i in 0 until llDotIndicators.childCount) {
+            val dot    = llDotIndicators.getChildAt(i)
+            val params = dot.layoutParams as LinearLayout.LayoutParams
+            if (i == activeIndex) {
+                params.width = (18 * dp).toInt()
+                dot.background = resources.getDrawable(R.drawable.bg_dot_active, null)
+            } else {
+                params.width = (7 * dp).toInt()
+                dot.background = resources.getDrawable(R.drawable.bg_dot_inactive, null)
+            }
+            dot.layoutParams = params
+        }
     }
 
     // ── 8. Dot indicator builder
@@ -332,22 +351,22 @@ class DonorBottomSheetFragment : BottomSheetDialogFragment() {
         }
     }
 
-    private fun updateDots(activeIndex: Int) {
-        val dp = resources.displayMetrics.density
-
-        for (i in 0 until llDotIndicators.childCount) {
-            val dot    = llDotIndicators.getChildAt(i)
-            val params = dot.layoutParams as LinearLayout.LayoutParams
-            if (i == activeIndex) {
-                params.width = (18 * dp).toInt()
-                dot.background = resources.getDrawable(R.drawable.bg_dot_active, null)
-            } else {
-                params.width = (7 * dp).toInt()
-                dot.background = resources.getDrawable(R.drawable.bg_dot_inactive, null)
-            }
-            dot.layoutParams = params
-        }
-    }
+//    private fun updateDots(activeIndex: Int) {
+//        val dp = resources.displayMetrics.density
+//
+//        for (i in 0 until llDotIndicators.childCount) {
+//            val dot    = llDotIndicators.getChildAt(i)
+//            val params = dot.layoutParams as LinearLayout.LayoutParams
+//            if (i == activeIndex) {
+//                params.width = (18 * dp).toInt()
+//                dot.background = resources.getDrawable(R.drawable.bg_dot_active, null)
+//            } else {
+//                params.width = (7 * dp).toInt()
+//                dot.background = resources.getDrawable(R.drawable.bg_dot_inactive, null)
+//            }
+//            dot.layoutParams = params
+//        }
+//    }
 
     // ── 9. Carousel runner
 
