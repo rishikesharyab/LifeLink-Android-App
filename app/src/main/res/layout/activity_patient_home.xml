@@ -69,7 +69,7 @@
                 android:hint="Search hospital, area or blood group"
                 android:textColorHint="@color/text_secondary"
                 android:textColor="@color/text_primary"
-                android:textSize="14sp"
+                android:textSize="17sp"
                 android:imeOptions="actionSearch"
                 android:inputType="text"
                 android:focusable="true"

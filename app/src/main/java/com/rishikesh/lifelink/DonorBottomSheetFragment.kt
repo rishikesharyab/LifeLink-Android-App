@@ -129,6 +129,10 @@ class DonorBottomSheetFragment : BottomSheetDialogFragment() {
         root.findViewById<TextView>(R.id.btnNgoRegister).setOnClickListener {
             startActivity(Intent(requireContext(), NgoRegistrationActivity::class.java))
         }
+
+        tvAvatar.setOnClickListener {
+            startActivity(Intent(requireContext(), ProfileActivity::class.java))
+        }
     }
 
     private fun populateUi(donor: Donor) {
@@ -207,6 +211,8 @@ class DonorBottomSheetFragment : BottomSheetDialogFragment() {
             .get()
             .addOnSuccessListener { documents ->
 
+                if (!isAdded || view == null) return@addOnSuccessListener
+
                 android.util.Log.d("CAMP_DEBUG", "Total docs found: ${documents.size()}")
 
                 nearbyCamps.clear()
@@ -268,6 +274,8 @@ class DonorBottomSheetFragment : BottomSheetDialogFragment() {
                 }
             }
             .addOnFailureListener { e ->
+                if (!isAdded || view == null) return@addOnFailureListener
+
                 android.util.Log.e("CAMP_DEBUG", "Failed to fetch camps: ${e.message}")
                 llCampCard.visibility = View.GONE
                 tvNoCamps.visibility  = View.VISIBLE
@@ -332,6 +340,8 @@ class DonorBottomSheetFragment : BottomSheetDialogFragment() {
     // ── 8. Dot indicator builder
 
     private fun buildDots() {
+        if (!isAdded || view == null) return
+
         llDotIndicators.removeAllViews()
         val dp = resources.displayMetrics.density
 

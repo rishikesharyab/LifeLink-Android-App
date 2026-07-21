@@ -24,6 +24,12 @@
             android:exported="false"/>
         <activity android:name=".DonorRegistrationActivity"
             />
+        <activity android:name=".ProfileActivity" />
+        <activity android:name=".EditProfileActivity" />
+        <activity android:name=".DonationHistoryActivity"/>
+        <activity android:name=".NotificationSettingsActivity"/>
+        <activity android:name=".PrivacyActivity"/>
+
         <activity
             android:name=".PatientHomeActivity"
             android:exported="false" />
