@@ -18,6 +18,7 @@ class DonationHistoryAdapter(
     class ViewHolder(view: View) : RecyclerView.ViewHolder(view) {
         val campName: TextView = view.findViewById(R.id.tvItemCampName)
         val location: TextView = view.findViewById(R.id.tvItemLocation)
+        val receiver: TextView = view.findViewById(R.id.tvItemReceiver)
         val date: TextView = view.findViewById(R.id.tvItemDate)
         val bloodGroup: TextView = view.findViewById(R.id.tvItemBloodGroup)
     }
@@ -34,6 +35,16 @@ class DonationHistoryAdapter(
         holder.location.text = record.location.ifBlank { "—" }
         holder.date.text = record.date?.let { dateFormat.format(it) } ?: "—"
         holder.bloodGroup.text = record.bloodGroup.ifBlank { "—" }
+
+        if (record.receiverName.isNotBlank()) {
+            holder.receiver.visibility = View.VISIBLE
+            holder.receiver.text = if (record.receiverLocation.isNotBlank())
+                "Donated to ${record.receiverName} · ${record.receiverLocation}"
+            else
+                "Donated to ${record.receiverName}"
+        } else {
+            holder.receiver.visibility = View.GONE
+        }
     }
 
     override fun getItemCount(): Int = items.size

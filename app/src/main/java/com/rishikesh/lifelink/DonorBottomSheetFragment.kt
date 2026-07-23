@@ -74,6 +74,9 @@ class DonorBottomSheetFragment : BottomSheetDialogFragment() {
     private lateinit var tvCampIndicator  : TextView
     private lateinit var btnRegisterCamp  : TextView
 
+    private lateinit var tvSendRequestSummary: TextView
+    private lateinit var tvReceiveRequestSummary: TextView
+
 
 
     override fun onCreateView(
@@ -133,6 +136,18 @@ class DonorBottomSheetFragment : BottomSheetDialogFragment() {
         tvAvatar.setOnClickListener {
             startActivity(Intent(requireContext(), ProfileActivity::class.java))
         }
+
+        tvSendRequestSummary = root.findViewById(R.id.tvSendRequestSummary)
+        tvReceiveRequestSummary = root.findViewById(R.id.tvReceiveRequestSummary)
+
+        root.findViewById<LinearLayout>(R.id.cardSendRequest).setOnClickListener {
+            startActivity(Intent(requireContext(), SendRequestActivity::class.java))
+        }
+        root.findViewById<LinearLayout>(R.id.cardReceiveRequest).setOnClickListener {
+            startActivity(Intent(requireContext(), ReceiveRequestActivity::class.java))
+        }
+
+        loadRequestSummaries()
     }
 
     private fun populateUi(donor: Donor) {
@@ -202,6 +217,46 @@ class DonorBottomSheetFragment : BottomSheetDialogFragment() {
     }
 
     // ── 6. Main camp loading function
+    // ── Load counts for the Send/Receive request dashboard cards
+    private fun loadRequestSummaries() {
+        val uid = com.google.firebase.auth.FirebaseAuth.getInstance().currentUser?.uid ?: return
+        val db = com.google.firebase.firestore.FirebaseFirestore.getInstance()
+
+        db.collection("BloodRequests")
+            .whereEqualTo("fromUserId", uid)
+            .get()
+            .addOnSuccessListener { documents ->
+                if (!isAdded || view == null) return@addOnSuccessListener
+
+                var pending = 0
+                var accepted = 0
+                for (doc in documents) {
+                    when (doc.getString("status")) {
+                        "pending" -> pending++
+                        "accepted" -> accepted++
+                    }
+                }
+
+                tvSendRequestSummary.text = when {
+                    pending == 0 && accepted == 0 -> "No requests yet"
+                    else -> "$pending pending · $accepted accepted"
+                }
+            }
+
+        db.collection("BloodRequests")
+            .whereEqualTo("toUserId", uid)
+            .whereEqualTo("status", "pending")
+            .get()
+            .addOnSuccessListener { documents ->
+                if (!isAdded || view == null) return@addOnSuccessListener
+
+                val count = documents.size()
+                tvReceiveRequestSummary.text =
+                    if (count == 0) "No new requests"
+                    else "$count new request${if (count == 1) "" else "s"}"
+            }
+    }
+
     private fun loadUpcomingCamps(userLat: Double, userLng: Double) {
         val db  = com.google.firebase.firestore.FirebaseFirestore.getInstance()
 

@@ -29,6 +29,9 @@
         <activity android:name=".DonationHistoryActivity"/>
         <activity android:name=".NotificationSettingsActivity"/>
         <activity android:name=".PrivacyActivity"/>
+        <activity android:name=".SendRequestActivity"/>
+        <activity android:name=".ReceiveRequestActivity"/>
+
 
         <activity
             android:name=".PatientHomeActivity"

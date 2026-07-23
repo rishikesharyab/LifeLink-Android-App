@@ -57,7 +57,9 @@ class DonationHistoryActivity : AppCompatActivity() {
                         campName = doc.getString("campName") ?: "",
                         location = doc.getString("location") ?: "",
                         bloodGroup = doc.getString("bloodGroup") ?: "",
-                        unitsDonated = doc.getLong("unitsDonated")?.toInt() ?: 1
+                        unitsDonated = doc.getLong("unitsDonated")?.toInt() ?: 1,
+                        receiverName = doc.getString("receiverName") ?: "",
+                        receiverLocation = doc.getString("receiverLocation") ?: ""
                     )
                 }
 
