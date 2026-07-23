@@ -8,5 +8,7 @@ data class DonationRecord(
     val campName: String = "",
     val location: String = "",
     val bloodGroup: String = "",
-    val unitsDonated: Int = 1
+    val unitsDonated: Int = 1,
+    val receiverName: String = "",
+    val receiverLocation: String = ""
 )
