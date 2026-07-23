@@ -37,8 +37,11 @@ import com.google.android.material.chip.Chip
 import com.google.android.material.chip.ChipGroup
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FirebaseFirestore
+import com.google.firebase.Timestamp
 import com.rishikesh.lifelink.model.Donor
+import com.rishikesh.lifelink.model.BloodRequest
 import java.util.Locale
+import java.util.Date
 import kotlin.math.*
 
 class PatientHomeActivity : AppCompatActivity(), OnMapReadyCallback {
@@ -52,6 +55,7 @@ class PatientHomeActivity : AppCompatActivity(), OnMapReadyCallback {
     private lateinit var tvNoDonors: TextView
     private lateinit var donorAdapter: DonorAdapter
     private val donorList = mutableListOf<Donor>()
+    private val requestedDonorIds = mutableSetOf<String>()
 
     private val db = FirebaseFirestore.getInstance()
 
@@ -276,12 +280,19 @@ class PatientHomeActivity : AppCompatActivity(), OnMapReadyCallback {
         donorRecyclerView.layoutManager = LinearLayoutManager(this)
         tvNoDonors = findViewById(R.id.tvNoDonors)
 
-        donorAdapter = DonorAdapter(donorList) { donor ->
-            val latLng = LatLng(donor.latitude, donor.longitude)
-            googleMap.animateCamera(
-                CameraUpdateFactory.newLatLngZoom(latLng, 15f)
-            )
-        }
+        donorAdapter = DonorAdapter(
+            donorList,
+            requestedDonorIds,
+            onItemClick = { donor ->
+                val latLng = LatLng(donor.latitude, donor.longitude)
+                googleMap.animateCamera(
+                    CameraUpdateFactory.newLatLngZoom(latLng, 15f)
+                )
+            },
+            onRequestClick = { donor, position ->
+                sendBloodRequest(donor, position)
+            }
+        )
 
         donorRecyclerView.adapter = donorAdapter
 
@@ -441,7 +452,11 @@ class PatientHomeActivity : AppCompatActivity(), OnMapReadyCallback {
 
                 Log.d("SEARCH_DEBUG", "Docs size: ${documents.size()}")
 
+                val currentUid = FirebaseAuth.getInstance().currentUser?.uid
+
                 for (doc in documents) {
+
+                    if (doc.id == currentUid) continue // don't show yourself in your own search
 
                     val lat = doc.getDouble("latitude") ?: continue
                     val lng = doc.getDouble("longitude") ?: continue
@@ -449,7 +464,9 @@ class PatientHomeActivity : AppCompatActivity(), OnMapReadyCallback {
                     val distance = distanceInKm(userLat, userLng, lat, lng)
 
                     val donor = Donor(
+                        id = doc.id,
                         name = doc.getString("name") ?: "Unknown",
+                        location = doc.getString("location") ?: "",
                         bloodGroup = doc.getString("bloodGroup") ?: "N/A",
                         phone = doc.getString("phone") ?: "N/A",
                         latitude = lat,
@@ -467,6 +484,7 @@ class PatientHomeActivity : AppCompatActivity(), OnMapReadyCallback {
                 }
 
                 donorAdapter.notifyDataSetChanged()
+                refreshRequestedState()
 
                 if (donorList.isEmpty()) {
                     donorRecyclerView.visibility = View.GONE
@@ -482,6 +500,110 @@ class PatientHomeActivity : AppCompatActivity(), OnMapReadyCallback {
             }
     }
 
+
+    // ================= BLOOD REQUESTS =================
+
+    /**
+     * Marks donors as "Requested" (disabled button) if there's a still-pending
+     * request within the 3-minute cooldown window, or if it's already been
+     * accepted. Anything past the cooldown reverts to a resendable "Request" state.
+     *
+     * This only patches request-button state on top of an already-rendered list —
+     * it must never gate whether the donor list itself shows up, since this query
+     * can fail independently (e.g. missing Firestore security rules for
+     * BloodRequests) without that being a reason to hide search results.
+     */
+    private fun refreshRequestedState() {
+        val currentUser = FirebaseAuth.getInstance().currentUser ?: return
+
+        db.collection("BloodRequests")
+            .whereEqualTo("fromUserId", currentUser.uid)
+            .get()
+            .addOnSuccessListener { documents ->
+
+                requestedDonorIds.clear()
+                val now = Date().time
+
+                for (doc in documents) {
+                    val toUserId = doc.getString("toUserId") ?: continue
+                    val status = doc.getString("status") ?: BloodRequest.STATUS_PENDING
+                    val createdAt = doc.getDate("createdAt")
+
+                    val stillCoolingDown = createdAt != null &&
+                            (now - createdAt.time) < BloodRequest.RESEND_COOLDOWN_MS
+
+                    if (status == BloodRequest.STATUS_ACCEPTED || stillCoolingDown) {
+                        requestedDonorIds.add(toUserId)
+                    }
+                }
+
+                donorAdapter.notifyDataSetChanged()
+            }
+            .addOnFailureListener {
+                Log.w("SEARCH_DEBUG", "Couldn't refresh request state (donor list still shows)", it)
+            }
+    }
+
+    private fun sendBloodRequest(donor: Donor, position: Int) {
+        val currentUser = FirebaseAuth.getInstance().currentUser
+        if (currentUser == null) {
+            Toast.makeText(this, "Please sign in to send a request", Toast.LENGTH_SHORT).show()
+            return
+        }
+
+        val docId = BloodRequest.docId(currentUser.uid, donor.id)
+        val requestRef = db.collection("BloodRequests").document(docId)
+
+        requestRef.get().addOnSuccessListener { existing ->
+
+            val status = existing.getString("status")
+            val createdAt = existing.getDate("createdAt")
+            val now = Date().time
+
+            if (status == BloodRequest.STATUS_ACCEPTED) {
+                Toast.makeText(this, "${donor.name} already accepted your request", Toast.LENGTH_SHORT).show()
+                return@addOnSuccessListener
+            }
+
+            if (createdAt != null && (now - createdAt.time) < BloodRequest.RESEND_COOLDOWN_MS) {
+                val remainingSec = (BloodRequest.RESEND_COOLDOWN_MS - (now - createdAt.time)) / 1000
+                Toast.makeText(this, "You can resend in ${remainingSec}s", Toast.LENGTH_SHORT).show()
+                return@addOnSuccessListener
+            }
+
+            db.collection("Users").document(currentUser.uid).get()
+                .addOnSuccessListener { userDoc ->
+
+                    val fromName = userDoc.getString("name") ?: "A patient"
+                    val fromPhone = userDoc.getString("phone") ?: ""
+                    val fromLocation = userDoc.getString("location") ?: ""
+
+                    val requestData = hashMapOf(
+                        "fromUserId" to currentUser.uid,
+                        "fromUserName" to fromName,
+                        "fromUserPhone" to fromPhone,
+                        "fromUserLocation" to fromLocation,
+                        "toUserId" to donor.id,
+                        "toUserName" to donor.name,
+                        "toUserLocation" to donor.location,
+                        "bloodGroup" to donor.bloodGroup,
+                        "distanceKm" to donor.distanceKm,
+                        "status" to BloodRequest.STATUS_PENDING,
+                        "createdAt" to Timestamp.now()
+                    )
+
+                    requestRef.set(requestData)
+                        .addOnSuccessListener {
+                            requestedDonorIds.add(donor.id)
+                            donorAdapter.notifyItemChanged(position)
+                            Toast.makeText(this, "Request sent to ${donor.name}", Toast.LENGTH_SHORT).show()
+                        }
+                        .addOnFailureListener {
+                            Toast.makeText(this, "Couldn't send request. Try again.", Toast.LENGTH_SHORT).show()
+                        }
+                }
+        }
+    }
 
     // ================= OPEN DASHBOARD =================
 
