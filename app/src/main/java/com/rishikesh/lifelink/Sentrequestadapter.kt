@@ -15,7 +15,10 @@ class SentRequestAdapter(
 
     class ViewHolder(view: View) : RecyclerView.ViewHolder(view) {
         val name: TextView = view.findViewById(R.id.tvSentName)
-        val meta: TextView = view.findViewById(R.id.tvSentMeta)
+        val location: TextView = view.findViewById(R.id.tvSentLocation)
+        val bloodGroup: TextView = view.findViewById(R.id.tvSentBloodGroup)
+        val distance: TextView = view.findViewById(R.id.tvSentDistance)
+        val status: TextView = view.findViewById(R.id.tvSentStatus)
         val resendButton: TextView = view.findViewById(R.id.btnResend)
     }
 
@@ -28,12 +31,14 @@ class SentRequestAdapter(
     override fun onBindViewHolder(holder: ViewHolder, position: Int) {
         val request = items[position]
         holder.name.text = request.toUserName
+        holder.location.text = request.toUserLocation.ifBlank { "Location not shared" }
+        holder.bloodGroup.text = request.bloodGroup
+        holder.distance.text = "%.1f km".format(request.distanceKm)
 
-        val statusLabel = when (request.status) {
+        holder.status.text = when (request.status) {
             BloodRequest.STATUS_DECLINED -> "Declined"
             else -> "Waiting for response"
         }
-        holder.meta.text = "${request.bloodGroup} · $statusLabel"
 
         val cooldownPassed = request.createdAt == null ||
                 (Date().time - request.createdAt.time) >= BloodRequest.RESEND_COOLDOWN_MS

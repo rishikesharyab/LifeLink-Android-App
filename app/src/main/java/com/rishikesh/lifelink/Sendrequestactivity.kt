@@ -80,6 +80,7 @@ class SendRequestActivity : AppCompatActivity() {
                         toUserName = doc.getString("toUserName") ?: "Unknown donor",
                         toUserLocation = doc.getString("toUserLocation") ?: "",
                         bloodGroup = doc.getString("bloodGroup") ?: "",
+                        distanceKm = doc.getDouble("distanceKm") ?: 0.0,
                         status = doc.getString("status") ?: BloodRequest.STATUS_PENDING,
                         donated = doc.getBoolean("donated") ?: false,
                         createdAt = doc.getDate("createdAt")

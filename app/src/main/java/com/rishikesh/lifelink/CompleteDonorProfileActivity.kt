@@ -38,6 +38,7 @@ class CompleteDonorProfileActivity : AppCompatActivity() {
     private lateinit var fusedLocationClient: FusedLocationProviderClient
     private var userLat = 0.0
     private var userLng = 0.0
+    private var currentLocationText: String = ""
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -214,6 +215,8 @@ class CompleteDonorProfileActivity : AppCompatActivity() {
         try {
             Log.d("STEP_DEBUG", "Building data...")
 
+            val location = currentLocationText
+
             val data = hashMapOf(
                 "name" to name,
                 "phone" to phone,
@@ -224,6 +227,7 @@ class CompleteDonorProfileActivity : AppCompatActivity() {
                 "travelRange" to travelRange,
                 "latitude" to userLat,
                 "longitude" to userLng,
+                "location" to location,
                 "profileCompleted" to true,
                 "userType" to "Donor"
             )
@@ -313,16 +317,17 @@ class CompleteDonorProfileActivity : AppCompatActivity() {
 
                 val address = addresses[0]
 
+                val sectorOrArea = address.subLocality ?: address.premises ?: ""
                 val city = address.locality ?: address.subAdminArea ?: ""
                 val state = address.adminArea ?: ""
 
                 val fullLocation = if (city.isNotEmpty()) {
-                    "$city, $state"
+                    "$sectorOrArea, $city"
                 } else {
                     address.getAddressLine(0) ?: "Unknown location"
                 }
 
-                findViewById<EditText>(R.id.locationEt).setText(fullLocation)
+                currentLocationText = fullLocation
             }
 
         } catch (e: Exception) {

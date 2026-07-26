@@ -17,7 +17,9 @@ class AcceptedRequestAdapter(
 
     class ViewHolder(view: View) : RecyclerView.ViewHolder(view) {
         val name: TextView = view.findViewById(R.id.tvAcceptedName)
-        val meta: TextView = view.findViewById(R.id.tvAcceptedMeta)
+        val location: TextView = view.findViewById(R.id.tvAcceptedLocation)
+        val bloodGroup: TextView = view.findViewById(R.id.tvAcceptedBloodGroup)
+        val distance: TextView = view.findViewById(R.id.tvAcceptedDistance)
         val phone: TextView = view.findViewById(R.id.tvAcceptedPhone)
         val callButton: ImageView = view.findViewById(R.id.btnCallDonor)
         val donatedButton: TextView = view.findViewById(R.id.btnMarkDonated)
@@ -32,7 +34,9 @@ class AcceptedRequestAdapter(
     override fun onBindViewHolder(holder: ViewHolder, position: Int) {
         val request = items[position]
         holder.name.text = request.toUserName
-        holder.meta.text = "${request.bloodGroup} · Accepted"
+        holder.location.text = request.toUserLocation.ifBlank { "Location not shared" }
+        holder.bloodGroup.text = request.bloodGroup
+        holder.distance.text = "%.1f km".format(request.distanceKm)
 
         val phoneNumber = donorPhones[request.toUserId]
         holder.phone.text = phoneNumber ?: "Phone unavailable"
