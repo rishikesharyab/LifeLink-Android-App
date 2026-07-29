@@ -1,5 +1,6 @@
 package com.rishikesh.lifelink
 
+
 import android.content.Intent
 import android.os.Bundle
 import android.view.LayoutInflater
@@ -189,12 +190,20 @@ class DonorBottomSheetFragment : BottomSheetDialogFragment() {
         val window = dialog?.window ?: return
         val params = window.attributes
         val screenHeight = resources.displayMetrics.heightPixels
+        val dp = resources.displayMetrics.density
 
-        params.height = (screenHeight * 0.87).toInt()
+        // Set to 75% height to keep search bar visible
+        params.height = (screenHeight * 0.75).toInt()
+
+        // Anchor to bottom and lift above the 70dp navigation bar
+        params.gravity = android.view.Gravity.BOTTOM
+        params.y = (70 * dp).toInt()
+
         window.attributes = params
-
         window.setDimAmount(0f)
     }
+
+
 
     private fun nextEligibleDate(lastDonation: java.util.Date): java.util.Date {
         return Calendar.getInstance().apply {

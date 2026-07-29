@@ -1,6 +1,9 @@
 package com.rishikesh.lifelink
 
 
+
+
+
 import android.Manifest
 import android.content.Intent
 import android.content.pm.PackageManager
@@ -608,24 +611,30 @@ class PatientHomeActivity : AppCompatActivity(), OnMapReadyCallback {
     // ================= OPEN DASHBOARD =================
 
     private fun openDonorDashboard() {
+        if (isDashboardVisible) return
 
         val existing = supportFragmentManager.findFragmentByTag("DonorDashboard")
-
         if (existing is DonorBottomSheetFragment) {
             existing.dismiss()
         }
 
-        if (isDashboardVisible) return
+        // Set flag early to prevent duplicate calls while Firebase is fetching
+        isDashboardVisible = true
 
-        val uid = FirebaseAuth.getInstance().currentUser?.uid ?: return
-
-
+        val uid = FirebaseAuth.getInstance().currentUser?.uid ?: run {
+            isDashboardVisible = false
+            return
+        }
 
         FirebaseFirestore.getInstance()
             .collection("Users")
             .document(uid)
             .get()
             .addOnSuccessListener { doc ->
+                if (!doc.exists()) {
+                    isDashboardVisible = false
+                    return@addOnSuccessListener
+                }
 
                 val donor = Donor(
                     id = uid,
@@ -641,16 +650,16 @@ class PatientHomeActivity : AppCompatActivity(), OnMapReadyCallback {
                     isAvailable = doc.getBoolean("available") ?: true
                 )
 
-//                val sheet = DonorBottomSheetFragment.newInstance(donor, currentLocationText)
-//                sheet.show(supportFragmentManager, "DonorDashboard")
                 val sheet = DonorBottomSheetFragment.newInstance(donor, currentLocationText, userLat, userLng)
                 sheet.show(supportFragmentManager, "DonorDashboard")
 
-                isDashboardVisible = true
                 isDonorListVisible = false
             }
-
+            .addOnFailureListener {
+                isDashboardVisible = false
+            }
     }
+
 
     private fun getCurrentLocation() {
 
@@ -699,8 +708,6 @@ class PatientHomeActivity : AppCompatActivity(), OnMapReadyCallback {
                 }
 
                 getAddressFromLatLng(userLat, userLng)
-                openDonorDashboard()
-
             } else {
                 Log.d("LOCATION_DEBUG", "Location NULL")
             }
@@ -708,6 +715,7 @@ class PatientHomeActivity : AppCompatActivity(), OnMapReadyCallback {
         // 🔥 Refresh dashboard when location ready
         openDonorDashboard()
     }
+
 
     private fun getAddressFromLatLng(lat: Double, lng: Double) {
 
