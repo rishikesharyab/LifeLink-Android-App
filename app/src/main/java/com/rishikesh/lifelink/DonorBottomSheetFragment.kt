@@ -147,7 +147,12 @@ class DonorBottomSheetFragment : BottomSheetDialogFragment() {
             startActivity(Intent(requireContext(), ReceiveRequestActivity::class.java))
         }
 
+        root.findViewById<TextView>(R.id.btnManageCamps).setOnClickListener {
+            startActivity(Intent(requireContext(), OrgCampListActivity::class.java))
+        }
+
         loadRequestSummaries()
+        checkOrganizationStatus(root)
     }
 
     private fun populateUi(donor: Donor) {
@@ -217,6 +222,21 @@ class DonorBottomSheetFragment : BottomSheetDialogFragment() {
     }
 
     // ── 6. Main camp loading function
+    // ── Show the Manage camps card only for accounts registered as an organization
+    private fun checkOrganizationStatus(root: View) {
+        val uid = com.google.firebase.auth.FirebaseAuth.getInstance().currentUser?.uid ?: return
+        val db = com.google.firebase.firestore.FirebaseFirestore.getInstance()
+
+        db.collection("Users").document(uid).get()
+            .addOnSuccessListener { doc ->
+                if (!isAdded || view == null) return@addOnSuccessListener
+
+                val isOrganization = doc.getBoolean("isOrganization") ?: false
+                root.findViewById<LinearLayout>(R.id.llManageCampsCard).visibility =
+                    if (isOrganization) View.VISIBLE else View.GONE
+            }
+    }
+
     // ── Load counts for the Send/Receive request dashboard cards
     private fun loadRequestSummaries() {
         val uid = com.google.firebase.auth.FirebaseAuth.getInstance().currentUser?.uid ?: return

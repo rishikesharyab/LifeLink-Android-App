@@ -163,6 +163,20 @@ class CampDetailActivity : AppCompatActivity(), OnMapReadyCallback {
         val userId = auth.currentUser?.uid ?: ""
         if (camp.registeredBy.contains(userId)) showAlreadyRegistered()
 
+        // ── This org's own camp? Show a management shortcut instead of hiding it ──
+        if (camp.orgId.isNotBlank() && camp.orgId == userId) {
+            btnConfirmRegister.text = "Manage applications"
+            btnConfirmRegister.isEnabled = true
+            btnConfirmRegister.alpha = 1f
+            btnConfirmRegister.setOnClickListener {
+                val intent = android.content.Intent(this, OrgCampManageActivity::class.java)
+                intent.putExtra("camp", camp)
+                startActivity(intent)
+            }
+            tvAlreadyRegistered.visibility = View.GONE
+            return
+        }
+
         // ── Location tap → show/hide map ──────────────────────────────────────
         findViewById<LinearLayout>(R.id.tvDetailLocation).setOnClickListener {
             llMapContainer.visibility = if (llMapContainer.visibility == View.VISIBLE)
@@ -225,11 +239,41 @@ class CampDetailActivity : AppCompatActivity(), OnMapReadyCallback {
         btnConfirmRegister.isEnabled = false
         btnConfirmRegister.text      = "Registering..."
 
-        db.collection("BloodCamps").document(campId)
-            .update("registeredBy", FieldValue.arrayUnion(userId))
-            .addOnSuccessListener {
-                Toast.makeText(this, "Successfully registered! 🎉", Toast.LENGTH_SHORT).show()
-                showAlreadyRegistered()
+        db.collection("Users").document(userId).get()
+            .addOnSuccessListener { userDoc ->
+
+                val application = hashMapOf(
+                    "donorId" to userId,
+                    "name" to (userDoc.getString("name") ?: "Unknown"),
+                    "age" to (userDoc.getLong("age")?.toInt() ?: 0),
+                    "bloodGroup" to (userDoc.getString("bloodGroup") ?: ""),
+                    "phone" to (userDoc.getString("phone") ?: ""),
+                    "appliedAt" to com.google.firebase.Timestamp.now(),
+                    "donated" to false
+                )
+
+                db.collection("BloodCamps").document(campId)
+                    .collection("applications")
+                    .add(application)
+                    .addOnSuccessListener {
+                        // Keep registeredBy in sync too — existing "already registered" check relies on it
+                        db.collection("BloodCamps").document(campId)
+                            .update("registeredBy", FieldValue.arrayUnion(userId))
+                            .addOnSuccessListener {
+                                Toast.makeText(this, "Successfully registered! 🎉", Toast.LENGTH_SHORT).show()
+                                showAlreadyRegistered()
+                            }
+                            .addOnFailureListener {
+                                // Application was still recorded successfully; this is a secondary sync field
+                                Toast.makeText(this, "Successfully registered! 🎉", Toast.LENGTH_SHORT).show()
+                                showAlreadyRegistered()
+                            }
+                    }
+                    .addOnFailureListener {
+                        Toast.makeText(this, "Registration failed. Try again.", Toast.LENGTH_SHORT).show()
+                        btnConfirmRegister.isEnabled = true
+                        btnConfirmRegister.text      = "Register for this Camp"
+                    }
             }
             .addOnFailureListener {
                 Toast.makeText(this, "Registration failed. Try again.", Toast.LENGTH_SHORT).show()

@@ -504,6 +504,47 @@
 
             </LinearLayout>
 
+            <View
+                android:id="@+id/dividerOrg"
+                android:layout_width="match_parent"
+                android:layout_height="0.5dp"
+                android:background="@color/divider"
+                android:layout_marginStart="14dp"
+                android:layout_marginEnd="14dp"
+                android:visibility="gone"/>
+
+            <LinearLayout
+                android:id="@+id/rowMyOrganization"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:gravity="center_vertical"
+                android:orientation="horizontal"
+                android:padding="14dp"
+                android:visibility="gone">
+
+                <ImageView
+                    android:layout_width="18dp"
+                    android:layout_height="18dp"
+                    android:src="@drawable/ic_inbox"
+                    app:tint="@color/coral_800"
+                    android:layout_marginEnd="10dp"/>
+
+                <TextView
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:text="My organization"
+                    android:textColor="@color/text_primary"
+                    android:textSize="13sp" />
+
+                <ImageView
+                    android:layout_width="14dp"
+                    android:layout_height="14dp"
+                    android:src="@drawable/ic_chevron_right"
+                    app:tint="@color/text_secondary"/>
+
+            </LinearLayout>
+
         </LinearLayout>
 
         <!-- ── LOG OUT ── -->

@@ -9,7 +9,9 @@ import android.text.InputType
 import android.view.View
 import android.widget.*
 import androidx.appcompat.app.AppCompatActivity
+import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FirebaseFirestore
+import com.google.firebase.firestore.SetOptions
 
 class NgoRegistrationActivity : AppCompatActivity() {
 
@@ -204,6 +206,8 @@ class NgoRegistrationActivity : AppCompatActivity() {
         btnNext.isEnabled = false
         btnNext.text      = "Submitting..."
 
+        val orgId = FirebaseAuth.getInstance().currentUser?.uid ?: ""
+
         val campData = hashMapOf(
             "campName"            to (formData["camp_name"]           ?: ""),
             "ngoName"             to (formData["org_name"]            ?: ""),
@@ -220,12 +224,20 @@ class NgoRegistrationActivity : AppCompatActivity() {
             "email"               to (formData["email"]               ?: ""),
             "blood_groups_needed" to (formData["blood_groups_needed"] ?: emptyList<String>()),
             "facilities"          to (formData["facilities"]          ?: emptyList<String>()),
-            "registeredBy"        to emptyList<String>()
+            "registeredBy"        to emptyList<String>(),
+            "orgId"               to orgId
         )
 
         db.collection("BloodCamps")
             .add(campData)
             .addOnSuccessListener {
+                // Mark this account as an organization, so the app can show
+                // org-only entry points (dashboard card, profile row) for it
+                if (orgId.isNotBlank()) {
+                    db.collection("Users").document(orgId)
+                        .set(mapOf("isOrganization" to true), SetOptions.merge())
+                }
+
                 Toast.makeText(this, "Camp registered successfully! 🎉", Toast.LENGTH_LONG).show()
                 finish()
             }

@@ -22,5 +22,6 @@ data class BloodCamp(
     val email             : String       = "",
     val bloodGroupsNeeded : List<String> = emptyList(),
     val facilities        : List<String> = emptyList(),
-    val registeredBy: List<String> = emptyList()
+    val registeredBy: List<String> = emptyList(),
+    val orgId: String = ""
 ) : Parcelable

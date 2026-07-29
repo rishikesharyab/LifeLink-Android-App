@@ -51,6 +51,9 @@ class ProfileActivity : AppCompatActivity() {
         findViewById<LinearLayout>(R.id.rowPrivacy).setOnClickListener {
             startActivity(Intent(this, PrivacyActivity::class.java))
         }
+        findViewById<LinearLayout>(R.id.rowMyOrganization).setOnClickListener {
+            startActivity(Intent(this, OrgCampListActivity::class.java))
+        }
 
         findViewById<LinearLayout>(R.id.rowLogout).setOnClickListener {
             auth.signOut()
@@ -102,6 +105,12 @@ class ProfileActivity : AppCompatActivity() {
                 val bloodGroup = doc.getString("bloodGroup") ?: "—"
                 val totalDonations = doc.getLong("totalDonations")?.toInt() ?: 0
                 val isAvailable = doc.getBoolean("available") ?: true
+                val isOrganization = doc.getBoolean("isOrganization") ?: false
+
+                findViewById<android.view.View>(R.id.dividerOrg).visibility =
+                    if (isOrganization) android.view.View.VISIBLE else android.view.View.GONE
+                findViewById<LinearLayout>(R.id.rowMyOrganization).visibility =
+                    if (isOrganization) android.view.View.VISIBLE else android.view.View.GONE
 
                 tvAvatar.text = initialsFrom(name)
                 tvName.text = name

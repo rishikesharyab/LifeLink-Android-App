@@ -31,6 +31,8 @@
         <activity android:name=".PrivacyActivity"/>
         <activity android:name=".SendRequestActivity"/>
         <activity android:name=".ReceiveRequestActivity"/>
+        <activity android:name=".OrgCampListActivity" />
+        <activity android:name=".OrgCampManageActivity" />
 
 
         <activity
