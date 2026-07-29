@@ -274,7 +274,7 @@ class PatientHomeActivity : AppCompatActivity(), OnMapReadyCallback {
         bottomSheetBehavior = BottomSheetBehavior.from(bottomSheet)
         bottomSheetBehavior.peekHeight = 380
         bottomSheetBehavior.isHideable = true
-        bottomSheetBehavior.isDraggable = false
+        bottomSheetBehavior.isDraggable = true
         bottomSheetBehavior.state = BottomSheetBehavior.STATE_HIDDEN
 
 
@@ -548,6 +548,7 @@ class PatientHomeActivity : AppCompatActivity(), OnMapReadyCallback {
     }
 
     private fun sendBloodRequest(donor: Donor, position: Int) {
+        Log.d("REQUEST_DEBUG", "sendBloodRequest called for donor: ${donor.name}")
         val currentUser = FirebaseAuth.getInstance().currentUser
         if (currentUser == null) {
             Toast.makeText(this, "Please sign in to send a request", Toast.LENGTH_SHORT).show()
@@ -557,55 +558,74 @@ class PatientHomeActivity : AppCompatActivity(), OnMapReadyCallback {
         val docId = BloodRequest.docId(currentUser.uid, donor.id)
         val requestRef = db.collection("BloodRequests").document(docId)
 
-        requestRef.get().addOnSuccessListener { existing ->
+        requestRef.get()
+            .addOnSuccessListener { existing ->
+                Log.d("REQUEST_DEBUG", "Existing request check: ${existing.exists()}")
 
-            val status = existing.getString("status")
-            val createdAt = existing.getDate("createdAt")
-            val now = Date().time
+                val status = existing.getString("status")
+                val createdAt = existing.getDate("createdAt")
+                val now = Date().time
 
-            if (status == BloodRequest.STATUS_ACCEPTED) {
-                Toast.makeText(this, "${donor.name} already accepted your request", Toast.LENGTH_SHORT).show()
-                return@addOnSuccessListener
-            }
-
-            if (createdAt != null && (now - createdAt.time) < BloodRequest.RESEND_COOLDOWN_MS) {
-                val remainingSec = (BloodRequest.RESEND_COOLDOWN_MS - (now - createdAt.time)) / 1000
-                Toast.makeText(this, "You can resend in ${remainingSec}s", Toast.LENGTH_SHORT).show()
-                return@addOnSuccessListener
-            }
-
-            db.collection("Users").document(currentUser.uid).get()
-                .addOnSuccessListener { userDoc ->
-
-                    val fromName = userDoc.getString("name") ?: "A patient"
-                    val fromPhone = userDoc.getString("phone") ?: ""
-                    val fromLocation = userDoc.getString("location") ?: ""
-
-                    val requestData = hashMapOf(
-                        "fromUserId" to currentUser.uid,
-                        "fromUserName" to fromName,
-                        "fromUserPhone" to fromPhone,
-                        "fromUserLocation" to fromLocation,
-                        "toUserId" to donor.id,
-                        "toUserName" to donor.name,
-                        "toUserLocation" to donor.location,
-                        "bloodGroup" to donor.bloodGroup,
-                        "distanceKm" to donor.distanceKm,
-                        "status" to BloodRequest.STATUS_PENDING,
-                        "createdAt" to Timestamp.now()
-                    )
-
-                    requestRef.set(requestData)
-                        .addOnSuccessListener {
-                            requestedDonorIds.add(donor.id)
-                            donorAdapter.notifyItemChanged(position)
-                            Toast.makeText(this, "Request sent to ${donor.name}", Toast.LENGTH_SHORT).show()
-                        }
-                        .addOnFailureListener {
-                            Toast.makeText(this, "Couldn't send request. Try again.", Toast.LENGTH_SHORT).show()
-                        }
+                if (status == BloodRequest.STATUS_ACCEPTED) {
+                    Toast.makeText(this, "${donor.name} already accepted your request", Toast.LENGTH_SHORT).show()
+                    return@addOnSuccessListener
                 }
-        }
+
+                if (createdAt != null && (now - createdAt.time) < BloodRequest.RESEND_COOLDOWN_MS) {
+                    val remainingSec = (BloodRequest.RESEND_COOLDOWN_MS - (now - createdAt.time)) / 1000
+                    Toast.makeText(this, "You can resend in ${remainingSec}s", Toast.LENGTH_SHORT).show()
+                    return@addOnSuccessListener
+                }
+
+                Log.d("REQUEST_DEBUG", "Fetching user info for UID: ${currentUser.uid}")
+                db.collection("Users").document(currentUser.uid).get()
+                    .addOnSuccessListener { userDoc ->
+                        if (!userDoc.exists()) {
+                            Log.e("REQUEST_DEBUG", "User document not found")
+                            Toast.makeText(this, "User profile not found. Complete your profile.", Toast.LENGTH_SHORT).show()
+                            return@addOnSuccessListener
+                        }
+
+                        val fromName = userDoc.getString("name") ?: "A patient"
+                        val fromPhone = userDoc.getString("phone") ?: ""
+                        val fromLocation = userDoc.getString("location") ?: ""
+
+                        val requestData = hashMapOf(
+                            "fromUserId" to currentUser.uid,
+                            "fromUserName" to fromName,
+                            "fromUserPhone" to fromPhone,
+                            "fromUserLocation" to fromLocation,
+                            "toUserId" to donor.id,
+                            "toUserName" to donor.name,
+                            "toUserLocation" to donor.location,
+                            "bloodGroup" to donor.bloodGroup,
+                            "distanceKm" to donor.distanceKm,
+                            "status" to BloodRequest.STATUS_PENDING,
+                            "createdAt" to Timestamp.now()
+                        )
+
+                        Log.d("REQUEST_DEBUG", "Saving request to Firestore...")
+                        requestRef.set(requestData)
+                            .addOnSuccessListener {
+                                Log.d("REQUEST_DEBUG", "Request saved successfully")
+                                requestedDonorIds.add(donor.id)
+                                donorAdapter.notifyItemChanged(position)
+                                Toast.makeText(this, "Request sent to ${donor.name}", Toast.LENGTH_SHORT).show()
+                            }
+                            .addOnFailureListener { e ->
+                                Log.e("REQUEST_DEBUG", "Firestore SET failed", e)
+                                Toast.makeText(this, "Couldn't send request: ${e.message}", Toast.LENGTH_SHORT).show()
+                            }
+                    }
+                    .addOnFailureListener { e ->
+                        Log.e("REQUEST_DEBUG", "User lookup failed", e)
+                        Toast.makeText(this, "Database error: ${e.message}", Toast.LENGTH_SHORT).show()
+                    }
+            }
+            .addOnFailureListener { e ->
+                Log.e("REQUEST_DEBUG", "Initial request lookup failed", e)
+                Toast.makeText(this, "Request failed: ${e.message}", Toast.LENGTH_SHORT).show()
+            }
     }
 
     // ================= OPEN DASHBOARD =================
