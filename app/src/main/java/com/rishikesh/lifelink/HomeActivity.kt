@@ -2,6 +2,7 @@ package com.rishikesh.lifelink
 
 import android.os.Bundle
 import androidx.appcompat.app.AppCompatActivity
+import com.rishikesh.lifelink.util.applySystemBarInsets
 import com.google.android.gms.maps.CameraUpdateFactory
 import com.google.android.gms.maps.GoogleMap
 import com.google.android.gms.maps.OnMapReadyCallback
@@ -14,6 +15,7 @@ class HomeActivity : AppCompatActivity(), OnMapReadyCallback {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_home)
+        applySystemBarInsets()
 
         val mapFragment = supportFragmentManager
             .findFragmentById(R.id.mapFragment) as SupportMapFragment

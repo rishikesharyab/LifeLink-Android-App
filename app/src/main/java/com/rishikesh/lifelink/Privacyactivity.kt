@@ -5,6 +5,7 @@ import android.widget.ImageView
 import android.widget.TextView
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
+import com.rishikesh.lifelink.util.applySystemBarInsets
 import com.google.android.material.switchmaterial.SwitchMaterial
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FirebaseFirestore
@@ -22,6 +23,7 @@ class PrivacyActivity : AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_privacy)
+        applySystemBarInsets()
 
         findViewById<ImageView>(R.id.ivPrivacyBack).setOnClickListener { finish() }
 

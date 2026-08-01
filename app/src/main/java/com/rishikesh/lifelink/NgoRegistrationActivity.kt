@@ -9,6 +9,7 @@ import android.text.InputType
 import android.view.View
 import android.widget.*
 import androidx.appcompat.app.AppCompatActivity
+import com.rishikesh.lifelink.util.applySystemBarInsets
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.firestore.SetOptions
@@ -52,6 +53,7 @@ class NgoRegistrationActivity : AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_ngo_registration)
+        applySystemBarInsets()
 
         tvStepLabel    = findViewById(R.id.tvStepLabel)
         tvStepTitle    = findViewById(R.id.tvStepTitle)

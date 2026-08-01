@@ -5,5 +5,13 @@
         <!-- <item name="colorPrimary">@color/my_light_primary</item> -->
     </style>
 
-    <style name="Theme.LifeLink" parent="Base.Theme.LifeLink" />
+    <style name="Theme.LifeLink" parent="Base.Theme.LifeLink">
+        <!-- Transparent system bars -->
+        <item name="android:statusBarColor">@android:color/transparent</item>
+        <item name="android:navigationBarColor">@android:color/transparent</item>
+    </style>
+    <style name="ThemeOverlay.LifeLink.BottomSheetNoAutoStatusBar" parent="ThemeOverlay.Material3.BottomSheetDialog">
+        <item name="enableEdgeToEdge">false</item>
+    </style>
 </resources>
+

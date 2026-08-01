@@ -4,6 +4,7 @@ import android.content.Context
 import android.os.Bundle
 import android.widget.ImageView
 import androidx.appcompat.app.AppCompatActivity
+import com.rishikesh.lifelink.util.applySystemBarInsets
 import com.google.android.material.switchmaterial.SwitchMaterial
 
 class NotificationSettingsActivity : AppCompatActivity() {
@@ -20,6 +21,7 @@ class NotificationSettingsActivity : AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_notifications)
+        applySystemBarInsets()
 
         prefs = getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
 

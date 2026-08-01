@@ -7,6 +7,7 @@ import android.widget.TextView
 import android.widget.Toast
 import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
+import com.rishikesh.lifelink.util.applySystemBarInsets
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import com.google.firebase.Timestamp
@@ -44,6 +45,7 @@ class OrgCampManageActivity : AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_org_camp_manage)
+        applySystemBarInsets()
 
         camp = intent.getParcelableExtra("camp") ?: run { finish(); return }
 

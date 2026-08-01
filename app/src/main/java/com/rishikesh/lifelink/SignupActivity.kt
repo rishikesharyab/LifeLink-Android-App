@@ -4,6 +4,9 @@ import android.content.Intent
 import android.os.Bundle
 import android.widget.*
 import androidx.appcompat.app.AppCompatActivity
+import androidx.core.view.ViewCompat
+import androidx.core.view.WindowInsetsCompat
+import androidx.core.view.updatePadding
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FirebaseFirestore
 
@@ -30,6 +33,18 @@ class SignupActivity : AppCompatActivity() {
         passwordEt = findViewById(R.id.passwordEt)
         signupBtn = findViewById(R.id.signupBtn)
         loginText = findViewById(R.id.loginText)
+
+        // Handle system bar insets to avoid overlap
+        ViewCompat.setOnApplyWindowInsetsListener(findViewById(android.R.id.content)) { v, insets ->
+            val systemBars = insets.getInsets(WindowInsetsCompat.Type.systemBars())
+            v.updatePadding(
+                left = systemBars.left,
+                top = systemBars.top,
+                right = systemBars.right,
+                bottom = systemBars.bottom
+            )
+            insets
+        }
 
 
         signupBtn.setOnClickListener {

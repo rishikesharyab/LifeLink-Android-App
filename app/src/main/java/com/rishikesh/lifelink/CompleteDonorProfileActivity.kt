@@ -5,6 +5,7 @@ import android.location.Geocoder
 import android.os.Bundle
 import android.widget.*
 import androidx.appcompat.app.AppCompatActivity
+import com.rishikesh.lifelink.util.applySystemBarInsets
 import androidx.core.app.ActivityCompat
 import androidx.core.location.LocationManagerCompat.getCurrentLocation
 import com.google.android.gms.location.FusedLocationProviderClient
@@ -43,6 +44,7 @@ class CompleteDonorProfileActivity : AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_complete_donor_profile)
+        applySystemBarInsets()
         // ====== SPINNERS SETUP ======
 
         val genderSpinner = findViewById<Spinner>(R.id.genderSpinner)

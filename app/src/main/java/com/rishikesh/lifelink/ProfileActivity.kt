@@ -8,6 +8,7 @@ import android.widget.ProgressBar
 import android.widget.TextView
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
+import com.rishikesh.lifelink.util.applySystemBarInsets
 import com.google.android.material.switchmaterial.SwitchMaterial
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FirebaseFirestore
@@ -34,6 +35,7 @@ class ProfileActivity : AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_profile)
+        applySystemBarInsets()
 
         bindViews()
 
@@ -120,8 +122,8 @@ class ProfileActivity : AppCompatActivity() {
                 tvDonations.text = totalDonations.toString()
                 tvLivesSaved.text = (totalDonations * 3).toString()
 
-                val badge = Badge.from(totalDonations)
-                tvBadgeTitle.text = "${badge.title} ${badge.subtitle}"
+//                val badge = Badge.from(totalDonations)
+//                tvBadgeTitle.text = "${badge.title} ${badge.subtitle}"
 
                 val (nextLabel, progress) = badgeProgress(totalDonations)
                 tvBadgeNext.text = nextLabel

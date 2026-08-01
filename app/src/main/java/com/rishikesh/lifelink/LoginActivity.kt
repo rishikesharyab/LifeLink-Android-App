@@ -11,6 +11,9 @@ import androidx.appcompat.app.AppCompatActivity
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FirebaseFirestore
 import androidx.appcompat.app.AlertDialog
+import androidx.core.view.ViewCompat
+import androidx.core.view.WindowInsetsCompat
+import androidx.core.view.updatePadding
 
 
 class LoginActivity : AppCompatActivity() {
@@ -44,6 +47,18 @@ class LoginActivity : AppCompatActivity() {
         passwordEt = findViewById(R.id.passwordEt)
         loginBtn = findViewById(R.id.loginBtn)
         signupText = findViewById(R.id.signupText)
+
+        // Handle system bar insets to avoid overlap
+        ViewCompat.setOnApplyWindowInsetsListener(findViewById(android.R.id.content)) { v, insets ->
+            val systemBars = insets.getInsets(WindowInsetsCompat.Type.systemBars())
+            v.updatePadding(
+                left = systemBars.left,
+                top = systemBars.top,
+                right = systemBars.right,
+                bottom = systemBars.bottom
+            )
+            insets
+        }
 
         loginBtn.setOnClickListener {
             loginUser()

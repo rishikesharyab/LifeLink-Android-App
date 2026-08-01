@@ -2,8 +2,6 @@ package com.rishikesh.lifelink
 
 
 
-
-
 import android.Manifest
 import android.content.Intent
 import android.content.pm.PackageManager
@@ -14,6 +12,7 @@ import android.os.Handler
 import android.os.Looper
 import android.util.Log
 import android.view.View
+import android.view.ViewGroup
 import android.widget.EditText
 import android.widget.ImageView
 import android.widget.LinearLayout
@@ -24,6 +23,9 @@ import androidx.activity.addCallback
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
+import androidx.core.view.ViewCompat
+import androidx.core.view.WindowInsetsCompat
+import androidx.core.view.updateLayoutParams
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import com.google.android.gms.location.FusedLocationProviderClient
@@ -43,6 +45,7 @@ import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.Timestamp
 import com.rishikesh.lifelink.model.Donor
 import com.rishikesh.lifelink.model.BloodRequest
+import com.rishikesh.lifelink.util.applyDynamicStatusBar
 import java.util.Locale
 import java.util.Date
 import kotlin.math.*
@@ -53,6 +56,7 @@ class PatientHomeActivity : AppCompatActivity(), OnMapReadyCallback {
 
     private lateinit var googleMap: GoogleMap
     private lateinit var bottomSheetBehavior: BottomSheetBehavior<LinearLayout>
+    private lateinit var dashboardBottomSheetBehavior: BottomSheetBehavior<androidx.core.widget.NestedScrollView>
 
     private lateinit var donorRecyclerView: RecyclerView
     private lateinit var tvNoDonors: TextView
@@ -84,14 +88,51 @@ class PatientHomeActivity : AppCompatActivity(), OnMapReadyCallback {
 
     private lateinit var fusedLocationClient: FusedLocationProviderClient
 
+    // ================= DONOR DASHBOARD (in-Activity bottom sheet) =================
+
+    private lateinit var tvAvatar: TextView
+    private lateinit var tvDonorName: TextView
+    private lateinit var tvDonorLocation: EditText
+    private lateinit var tvBloodGroup: TextView
+    private lateinit var tvTotalDonations: TextView
+    private lateinit var tvLivesSaved: TextView
+    private lateinit var tvBadgeTitle: TextView
+    private lateinit var tvBadgeSub: TextView
+    private lateinit var tvLastDonation: TextView
+    private lateinit var tvNextEligible: TextView
+    private lateinit var tvAvailabilitySubtitle: TextView
+    private lateinit var switchAvailability: com.google.android.material.switchmaterial.SwitchMaterial
+    private lateinit var tvSendRequestSummary: TextView
+    private lateinit var tvReceiveRequestSummary: TextView
+
+    private lateinit var llCampCard: LinearLayout
+    private lateinit var llDotIndicators: LinearLayout
+    private lateinit var tvNoCamps: TextView
+    private lateinit var tvCampName: TextView
+    private lateinit var tvNgoName: TextView
+    private lateinit var tvCampDate: TextView
+    private lateinit var tvCampLocation: TextView
+    private lateinit var tvCampTime: TextView
+    private lateinit var tvCampDistance: TextView
+    private lateinit var tvCampIndicator: TextView
+    private lateinit var btnRegisterCamp: TextView
+
+    private val nearbyCamps = mutableListOf<com.rishikesh.lifelink.model.BloodCamp>()
+    private var currentCampIndex = 0
+    private val carouselHandler = Handler(Looper.getMainLooper())
+    private val CAROUSEL_DELAY = 4000L
+    private val MAX_DISTANCE_KM = 10.0
+    private val DONATION_INTERVAL_MONTHS = 3
+
     // ================= ON CREATE =================
 
 
     override fun onCreate(savedInstanceState: Bundle?) {
+        applyDynamicStatusBar(isLightBackground = true)
         Log.d("TEST_FLOW", "PatientHomeActivity opened")
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_patient_home)
-        findViewById<View>(R.id.customBottomNav).bringToFront()
+
         val nav = findViewById<View>(R.id.customBottomNav)
         nav.bringToFront()
         nav.invalidate()
@@ -101,7 +142,64 @@ class PatientHomeActivity : AppCompatActivity(), OnMapReadyCallback {
         searchContainerView.bringToFront()
         searchContainerView.invalidate()
         searchContainerView.requestLayout()
-        // dialog?.window?.clearFlags(android.view.WindowManager.LayoutParams.FLAG_DIM_BEHIND)
+
+        // Handle Status Bar Overlap (Edge-to-Edge)
+        ViewCompat.setOnApplyWindowInsetsListener(searchContainerView) { v, insets ->
+            val systemBars = insets.getInsets(WindowInsetsCompat.Type.systemBars())
+            v.updateLayoutParams<ViewGroup.MarginLayoutParams> {
+                // Base margin is 8dp (was 12dp earlier)
+                topMargin = systemBars.top + (6 * resources.displayMetrics.density).toInt()
+            }
+            insets
+        }
+
+        // Cap the dashboard sheet's height so it never grows past the search bar's
+        // real bottom edge, once it's actually measured. maxHeight works regardless
+        // of fitToContents (unlike expandedOffset, which is silently ignored when
+        // fitToContents=true) — under fitToContents=true this correctly means "size
+        // to content normally, but cap + scroll internally if content exceeds it."
+        searchContainerView.post {
+            val gap = (90 * resources.displayMetrics.density).toInt()
+            val availableHeight = resources.displayMetrics.heightPixels - searchContainerView.bottom - gap
+            dashboardBottomSheetBehavior.maxHeight = availableHeight
+        }
+
+        // ⬆️ Bottom Sheet (donor search results) — must be initialized before
+        // getCurrentLocation() below, since it triggers openDonorDashboard()
+        // which touches dashboardBottomSheetBehavior.
+        val bottomSheet = findViewById<LinearLayout>(R.id.bottomSheet)
+        bottomSheetBehavior = BottomSheetBehavior.from(bottomSheet)
+        bottomSheetBehavior.peekHeight = 380
+        bottomSheetBehavior.isHideable = true
+        bottomSheetBehavior.isDraggable = true
+        bottomSheetBehavior.state = BottomSheetBehavior.STATE_HIDDEN
+
+        // ⬆️ Bottom Sheet (donor dashboard — replaces DonorBottomSheetFragment dialog)
+        val dashboardSheet = findViewById<androidx.core.widget.NestedScrollView>(R.id.donorDashboardSheet)
+        dashboardBottomSheetBehavior = BottomSheetBehavior.from(dashboardSheet)
+        dashboardBottomSheetBehavior.isHideable = true
+        dashboardBottomSheetBehavior.isDraggable = true
+        // fitToContents=true (default) sizes the sheet to its actual content height,
+        // avoiding the maxHeight/halfExpandedRatio measurement issues that caused
+        // both the earlier background gap and this scroll-lock. peekHeight is the
+        // "60% open" state; expandedOffset caps how far up full-drag can go.
+        dashboardBottomSheetBehavior.peekHeight = (resources.displayMetrics.heightPixels * 0.6).toInt()
+        // expandedOffset is set below via searchContainerView.post{}, once its real
+        // measured bottom position is known — a fixed 25% guess didn't account for
+        // the search bar's actual height/position, which varies with status bar inset.
+        dashboardBottomSheetBehavior.state = BottomSheetBehavior.STATE_HIDDEN
+
+        dashboardBottomSheetBehavior.addBottomSheetCallback(object : BottomSheetBehavior.BottomSheetCallback() {
+            override fun onStateChanged(sheet: View, newState: Int) {
+                isDashboardVisible = newState != BottomSheetBehavior.STATE_HIDDEN
+                if (newState == BottomSheetBehavior.STATE_HIDDEN) {
+                    carouselHandler.removeCallbacksAndMessages(null)
+                }
+            }
+            override fun onSlide(sheet: View, slideOffset: Float) {}
+        })
+
+        bindDashboardViews(dashboardSheet)
 
         fusedLocationClient = LocationServices.getFusedLocationProviderClient(this)
 
@@ -251,6 +349,9 @@ class PatientHomeActivity : AppCompatActivity(), OnMapReadyCallback {
                 bloodGroupScroll.visibility = View.VISIBLE
                 bloodGroupScroll.alpha = 0f
                 bloodGroupScroll.animate().alpha(1f).setDuration(150).start()
+
+                // Tapping the search bar should get the dashboard out of the way
+                dashboardBottomSheetBehavior.state = BottomSheetBehavior.STATE_HIDDEN
             } else {
                 if (chipGroup.checkedChipId == View.NO_ID) {
                     // Nothing selected — fully collapse and go back to the plain search icon
@@ -268,15 +369,6 @@ class PatientHomeActivity : AppCompatActivity(), OnMapReadyCallback {
             chipGroup.clearCheck()
             ivClearSearch.visibility = View.GONE
         }
-
-        // ⬆️ Bottom Sheet
-        val bottomSheet = findViewById<LinearLayout>(R.id.bottomSheet)
-        bottomSheetBehavior = BottomSheetBehavior.from(bottomSheet)
-        bottomSheetBehavior.peekHeight = 380
-        bottomSheetBehavior.isHideable = true
-        bottomSheetBehavior.isDraggable = true
-        bottomSheetBehavior.state = BottomSheetBehavior.STATE_HIDDEN
-
 
         // 📋 RecyclerView
         donorRecyclerView = findViewById(R.id.donorRecyclerView)
@@ -337,7 +429,14 @@ class PatientHomeActivity : AppCompatActivity(), OnMapReadyCallback {
 
             selectTab(navHome, navDonate, homeIcon, donateIcon, homeText, donateText)
 
-            openDonorDashboard()
+            val dashboardOpen = dashboardBottomSheetBehavior.state == BottomSheetBehavior.STATE_COLLAPSED ||
+                    dashboardBottomSheetBehavior.state == BottomSheetBehavior.STATE_EXPANDED
+
+            if (dashboardOpen) {
+                dashboardBottomSheetBehavior.state = BottomSheetBehavior.STATE_HIDDEN
+            } else {
+                openDonorDashboard()
+            }
         }
 
         navDonate.setOnClickListener {
@@ -407,32 +506,6 @@ class PatientHomeActivity : AppCompatActivity(), OnMapReadyCallback {
             donateText.setTextColor(getColor(R.color.black))
         }
     }
-
-    // ================= LOCATION =================
-
-
-
-//    override fun onRequestPermissionsResult(
-//        requestCode: Int,
-//        permissions: Array<out String>,
-//        grantResults: IntArray
-//    ) {
-//        super.onRequestPermissionsResult(requestCode, permissions, grantResults)
-//
-//        if (requestCode == LOCATION_PERMISSION_CODE &&
-//            grantResults.isNotEmpty() &&
-//            grantResults[0] == PackageManager.PERMISSION_GRANTED
-//        ) {
-//            enablePatientLocation()
-//        }
-//    }
-
-
-
-
-
-
-
 
     // ================= SEARCH DONORS =================
 
@@ -631,30 +704,18 @@ class PatientHomeActivity : AppCompatActivity(), OnMapReadyCallback {
     // ================= OPEN DASHBOARD =================
 
     private fun openDonorDashboard() {
-        if (isDashboardVisible) return
+        if (dashboardBottomSheetBehavior.state == BottomSheetBehavior.STATE_COLLAPSED ||
+            dashboardBottomSheetBehavior.state == BottomSheetBehavior.STATE_EXPANDED
+        ) return
 
-        val existing = supportFragmentManager.findFragmentByTag("DonorDashboard")
-        if (existing is DonorBottomSheetFragment) {
-            existing.dismiss()
-        }
-
-        // Set flag early to prevent duplicate calls while Firebase is fetching
-        isDashboardVisible = true
-
-        val uid = FirebaseAuth.getInstance().currentUser?.uid ?: run {
-            isDashboardVisible = false
-            return
-        }
+        val uid = FirebaseAuth.getInstance().currentUser?.uid ?: return
 
         FirebaseFirestore.getInstance()
             .collection("Users")
             .document(uid)
             .get()
             .addOnSuccessListener { doc ->
-                if (!doc.exists()) {
-                    isDashboardVisible = false
-                    return@addOnSuccessListener
-                }
+                if (!doc.exists()) return@addOnSuccessListener
 
                 val donor = Donor(
                     id = uid,
@@ -670,14 +731,287 @@ class PatientHomeActivity : AppCompatActivity(), OnMapReadyCallback {
                     isAvailable = doc.getBoolean("available") ?: true
                 )
 
-                val sheet = DonorBottomSheetFragment.newInstance(donor, currentLocationText, userLat, userLng)
-                sheet.show(supportFragmentManager, "DonorDashboard")
+                tvDonorLocation.setText(currentLocationText)
+                populateDashboardUi(donor)
+                loadUpcomingCamps(userLat, userLng)
+                loadRequestSummaries()
+                checkOrganizationStatus()
 
+                // Opens at 60% (peekHeight) — dragging up takes it to the capped
+                // expanded state (expandedOffset stops it below the search bar);
+                // if content still overflows that, it scrolls internally.
+                dashboardBottomSheetBehavior.state = BottomSheetBehavior.STATE_COLLAPSED
+                bottomSheetBehavior.state = BottomSheetBehavior.STATE_HIDDEN
                 isDonorListVisible = false
             }
-            .addOnFailureListener {
-                isDashboardVisible = false
+    }
+
+    // ── Bind donor-dashboard views (called once, in onCreate) ──────────────────
+
+    private fun bindDashboardViews(root: View) {
+        tvAvatar               = root.findViewById(R.id.tvAvatar)
+        tvDonorName            = root.findViewById(R.id.tvDonorName)
+        tvDonorLocation        = root.findViewById(R.id.locationEt)
+        tvBloodGroup           = root.findViewById(R.id.tvBloodGroup)
+        tvTotalDonations       = root.findViewById(R.id.tvTotalDonations)
+        tvLivesSaved           = root.findViewById(R.id.tvLivesSaved)
+        tvBadgeTitle           = root.findViewById(R.id.tvBadgeTitle)
+        tvBadgeSub             = root.findViewById(R.id.tvBadgeSub)
+        tvLastDonation         = root.findViewById(R.id.tvLastDonation)
+        tvNextEligible         = root.findViewById(R.id.tvNextEligible)
+        tvAvailabilitySubtitle = root.findViewById(R.id.tvAvailabilitySubtitle)
+        switchAvailability     = root.findViewById(R.id.switchAvailability)
+
+        llCampCard      = root.findViewById(R.id.llCampCard)
+        llDotIndicators = root.findViewById(R.id.llDotIndicators)
+        tvNoCamps       = root.findViewById(R.id.tvNoCamps)
+        tvCampName      = root.findViewById(R.id.tvCampName)
+        tvNgoName       = root.findViewById(R.id.tvNgoName)
+        tvCampDate      = root.findViewById(R.id.tvCampDate)
+        tvCampLocation  = root.findViewById(R.id.tvCampLocation)
+        tvCampTime      = root.findViewById(R.id.tvCampTime)
+        tvCampDistance  = root.findViewById(R.id.tvCampDistance)
+        tvCampIndicator = root.findViewById(R.id.tvCampIndicator)
+        btnRegisterCamp = root.findViewById(R.id.btnRegisterCamp)
+
+        tvSendRequestSummary    = root.findViewById(R.id.tvSendRequestSummary)
+        tvReceiveRequestSummary = root.findViewById(R.id.tvReceiveRequestSummary)
+
+        root.findViewById<TextView>(R.id.btnNgoRegister).setOnClickListener {
+            startActivity(Intent(this, NgoRegistrationActivity::class.java))
+        }
+        tvAvatar.setOnClickListener {
+            startActivity(Intent(this, ProfileActivity::class.java))
+        }
+        root.findViewById<LinearLayout>(R.id.cardSendRequest).setOnClickListener {
+            startActivity(Intent(this, SendRequestActivity::class.java))
+        }
+        root.findViewById<LinearLayout>(R.id.cardReceiveRequest).setOnClickListener {
+            startActivity(Intent(this, ReceiveRequestActivity::class.java))
+        }
+        root.findViewById<TextView>(R.id.btnManageCamps).setOnClickListener {
+            startActivity(Intent(this, OrgCampListActivity::class.java))
+        }
+    }
+
+    private fun populateDashboardUi(donor: Donor) {
+        tvAvatar.text        = donor.initials()
+        tvDonorName.text     = donor.name
+        tvBloodGroup.text    = donor.bloodGroup
+
+        tvTotalDonations.text = donor.totalDonations.toString()
+        tvLivesSaved.text     = (donor.totalDonations * 3).toString()
+
+        val badge = Badge.from(donor.totalDonations)
+        tvBadgeTitle.text = badge.title
+        tvBadgeSub.text   = badge.subtitle
+
+        val format = java.text.SimpleDateFormat("MMM dd, yyyy", Locale.getDefault())
+
+        if (donor.lastDonationDate != null) {
+            tvLastDonation.text = format.format(donor.lastDonationDate)
+            tvNextEligible.text = format.format(
+                java.util.Calendar.getInstance().apply {
+                    time = donor.lastDonationDate
+                    add(java.util.Calendar.MONTH, DONATION_INTERVAL_MONTHS)
+                }.time
+            )
+        } else {
+            tvLastDonation.text = "—"
+            tvNextEligible.text = "Now"
+        }
+
+        switchAvailability.isChecked = donor.isAvailable
+        switchAvailability.setOnCheckedChangeListener { _, isChecked ->
+            tvAvailabilitySubtitle.text =
+                if (isChecked) "Visible to nearby requests" else "Hidden from nearby requests"
+        }
+    }
+
+    private fun checkOrganizationStatus() {
+        val uid = FirebaseAuth.getInstance().currentUser?.uid ?: return
+        db.collection("Users").document(uid).get()
+            .addOnSuccessListener { doc ->
+                val isOrganization = doc.getBoolean("isOrganization") ?: false
+                findViewById<LinearLayout>(R.id.llManageCampsCard).visibility =
+                    if (isOrganization) View.VISIBLE else View.GONE
             }
+    }
+
+    private fun loadRequestSummaries() {
+        val uid = FirebaseAuth.getInstance().currentUser?.uid ?: return
+
+        db.collection("BloodRequests")
+            .whereEqualTo("fromUserId", uid)
+            .get()
+            .addOnSuccessListener { documents ->
+                var pending = 0
+                var accepted = 0
+                for (doc in documents) {
+                    when (doc.getString("status")) {
+                        "pending" -> pending++
+                        "accepted" -> accepted++
+                    }
+                }
+
+                tvSendRequestSummary.text = when {
+                    pending == 0 && accepted == 0 -> "No requests yet"
+                    else -> "$pending pending · $accepted accepted"
+                }
+            }
+
+        db.collection("BloodRequests")
+            .whereEqualTo("toUserId", uid)
+            .whereEqualTo("status", "pending")
+            .get()
+            .addOnSuccessListener { documents ->
+                val count = documents.size()
+                tvReceiveRequestSummary.text =
+                    if (count == 0) "No new requests" else "$count new request${if (count == 1) "" else "s"}"
+            }
+    }
+
+    private fun loadUpcomingCamps(userLat: Double, userLng: Double) {
+        db.collection("BloodCamps")
+            .get()
+            .addOnSuccessListener { documents ->
+
+                nearbyCamps.clear()
+
+                for (doc in documents) {
+                    val campLat = doc.getDouble("latitude")  ?: continue
+                    val campLng = doc.getDouble("longitude") ?: continue
+
+                    val results = FloatArray(1)
+                    android.location.Location.distanceBetween(
+                        userLat, userLng, campLat, campLng, results
+                    )
+                    val distKm = results[0] / 1000.0
+
+                    if (distKm > MAX_DISTANCE_KM) continue
+
+                    nearbyCamps.add(
+                        com.rishikesh.lifelink.model.BloodCamp(
+                            campId            = doc.id,
+                            campName          = doc.getString("campName")          ?: "",
+                            ngoName           = doc.getString("ngoName")           ?: "",
+                            date              = doc.getString("date")              ?: "",
+                            location          = doc.getString("location")          ?: "",
+                            latitude          = campLat,
+                            longitude         = campLng,
+                            startTime         = doc.getString("startTime")         ?: "",
+                            endTime           = doc.getString("endTime")           ?: "",
+                            endTimeMillis     = doc.getLong("endTimeMillis")       ?: 0L,
+                            distanceKm        = distKm,
+                            contactName       = doc.getString("contact_name")      ?: "",
+                            designation       = doc.getString("designation")       ?: "",
+                            phone             = doc.getString("phone")             ?: "",
+                            email             = doc.getString("email")             ?: "",
+                            bloodGroupsNeeded = (doc.get("blood_groups_needed") as? List<String>) ?: emptyList(),
+                            facilities        = (doc.get("facilities")            as? List<String>) ?: emptyList(),
+                            registeredBy      = (doc.get("registeredBy")          as? List<String>) ?: emptyList()
+                        )
+                    )
+                }
+
+                if (nearbyCamps.isEmpty()) {
+                    llCampCard.visibility = View.GONE
+                    tvNoCamps.visibility  = View.VISIBLE
+                } else {
+                    llCampCard.visibility = View.VISIBLE
+                    tvNoCamps.visibility  = View.GONE
+                    buildDots()
+                    showCamp(0, userLat, userLng)
+                    if (nearbyCamps.size > 1) startCarousel(userLat, userLng)
+                }
+            }
+            .addOnFailureListener {
+                llCampCard.visibility = View.GONE
+                tvNoCamps.visibility  = View.VISIBLE
+            }
+    }
+
+    private fun showCamp(index: Int, userLat: Double, userLng: Double) {
+        val camp = nearbyCamps[index]
+
+        val results = FloatArray(1)
+        android.location.Location.distanceBetween(
+            userLat, userLng, camp.latitude, camp.longitude, results
+        )
+        val distKm = results[0] / 1000.0
+
+        llCampCard.animate().alpha(0f).setDuration(250).withEndAction {
+
+            tvCampName.text      = camp.campName
+            tvNgoName.text       = camp.ngoName
+            tvCampDate.text      = camp.date
+            tvCampLocation.text  = camp.location
+            tvCampTime.text      = "${camp.startTime} – ${camp.endTime}"
+            tvCampDistance.text  = "%.1f km".format(distKm)
+            tvCampIndicator.text = "${index + 1} / ${nearbyCamps.size}"
+
+            updateDots(index)
+
+            btnRegisterCamp.setOnClickListener {
+                val intent = Intent(this, CampDetailActivity::class.java)
+                intent.putExtra("camp", camp)
+                startActivity(intent)
+            }
+
+            llCampCard.animate().alpha(1f).setDuration(250).start()
+
+        }.start()
+    }
+
+    private fun buildDots() {
+        llDotIndicators.removeAllViews()
+        val dp = resources.displayMetrics.density
+
+        nearbyCamps.forEachIndexed { i, _ ->
+            val dot = View(this)
+            val params = LinearLayout.LayoutParams(
+                if (i == 0) (18 * dp).toInt() else (7 * dp).toInt(),
+                (7 * dp).toInt()
+            ).apply { marginEnd = (6 * dp).toInt() }
+            dot.layoutParams = params
+            dot.background = if (i == 0)
+                resources.getDrawable(R.drawable.bg_dot_active, null)
+            else
+                resources.getDrawable(R.drawable.bg_dot_inactive, null)
+            dot.tag = "dot_$i"
+            llDotIndicators.addView(dot)
+        }
+    }
+
+    private fun updateDots(activeIndex: Int) {
+        val dp = resources.displayMetrics.density
+
+        for (i in 0 until llDotIndicators.childCount) {
+            val dot    = llDotIndicators.getChildAt(i)
+            val params = dot.layoutParams as LinearLayout.LayoutParams
+            if (i == activeIndex) {
+                params.width = (18 * dp).toInt()
+                dot.background = resources.getDrawable(R.drawable.bg_dot_active, null)
+            } else {
+                params.width = (7 * dp).toInt()
+                dot.background = resources.getDrawable(R.drawable.bg_dot_inactive, null)
+            }
+            dot.layoutParams = params
+        }
+    }
+
+    private fun startCarousel(userLat: Double, userLng: Double) {
+        carouselHandler.removeCallbacksAndMessages(null)
+
+        val runnable = object : Runnable {
+            override fun run() {
+                currentCampIndex = (currentCampIndex + 1) % nearbyCamps.size
+                showCamp(currentCampIndex, userLat, userLng)
+                carouselHandler.postDelayed(this, CAROUSEL_DELAY)
+            }
+        }
+
+        carouselHandler.postDelayed(runnable, CAROUSEL_DELAY)
     }
 
 
@@ -758,18 +1092,6 @@ class PatientHomeActivity : AppCompatActivity(), OnMapReadyCallback {
                     else -> address.getAddressLine(0) ?: "Unknown location"
                 }
 
-                // For sector, distric and state
-//                val fullLocation = when {
-//                    sector.isNotEmpty() && city.isNotEmpty() && state.isNotEmpty() ->
-//                        "$sector, $city, $state"
-//
-//                    city.isNotEmpty() && state.isNotEmpty() ->
-//                        "$city, $state"
-//
-//                    else ->
-//                        address.getAddressLine(0) ?: "Unknown location"
-//                }
-
                 currentLocationText = fullLocation
                 // 🔥 IMPORTANT: THIS updates UI
 
@@ -797,14 +1119,6 @@ class PatientHomeActivity : AppCompatActivity(), OnMapReadyCallback {
             if (grantResults.isNotEmpty() && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
 
                 Log.d("LOCATION_DEBUG", "Permission Granted by user")
-
-//                if (ContextCompat.checkSelfPermission(
-//                        this,
-//                        Manifest.permission.ACCESS_FINE_LOCATION
-//                    ) == PackageManager.PERMISSION_GRANTED
-//                ) {
-//                    googleMap.isMyLocationEnabled = true
-//                }
 
                 // 🔥 CALL AGAIN AFTER PERMISSION
                 getCurrentLocation()
@@ -930,5 +1244,26 @@ class PatientHomeActivity : AppCompatActivity(), OnMapReadyCallback {
                     )
                 }
             }
+    }
+}
+
+// ================= BADGE LOGIC =================
+// (moved here from the deleted DonorBottomSheetFragment.kt)
+
+enum class Badge(val title: String, val subtitle: String) {
+    NEW_HERO("New", "Hero"),
+    RISING_HERO("Rising", "Hero"),
+    SUPER_HERO("Super", "Hero"),
+    LEGEND("Blood", "Legend"),
+    CHAMPION("Life", "Champion");
+
+    companion object {
+        fun from(totalDonations: Int): Badge = when {
+            totalDonations == 0 -> NEW_HERO
+            totalDonations < 3  -> RISING_HERO
+            totalDonations < 8  -> SUPER_HERO
+            totalDonations < 15 -> LEGEND
+            else                -> CHAMPION
+        }
     }
 }
