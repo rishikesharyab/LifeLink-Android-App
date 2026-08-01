@@ -250,7 +250,8 @@ class SendRequestActivity : AppCompatActivity() {
                         )
                     )
                     .addOnFailureListener { e ->
-                        Log.e("DONATION_DEBUG", "Failed to update donor stats", e)
+                        Log.e("DONATION_DEBUG", "Failed to update donor stats: ${e.message}")
+                        Toast.makeText(this, "Couldn't update donor stats: ${e.message}", Toast.LENGTH_LONG).show()
                     }
 
                 acceptedRequests = acceptedRequests.map {

@@ -215,6 +215,10 @@ class OrgCampManageActivity : AppCompatActivity() {
                     db.collection("Users").document(application.donorId)
                         .collection("donations")
                         .add(donationRecord)
+                        .addOnFailureListener { e ->
+                            android.util.Log.e("DONATION_SYNC", "Failed to add donation history: ${e.message}")
+                            Toast.makeText(this, "Marked donated, but couldn't sync history: ${e.message}", Toast.LENGTH_LONG).show()
+                        }
 
                     db.collection("Users").document(application.donorId)
                         .update(
@@ -223,6 +227,9 @@ class OrgCampManageActivity : AppCompatActivity() {
                                 "lastDonationDate" to now
                             )
                         )
+                        .addOnFailureListener { e ->
+                            android.util.Log.e("DONATION_SYNC", "Failed to update donor stats: ${e.message}")
+                        }
                 }
 
                 Toast.makeText(this, "${application.name} marked as donated", Toast.LENGTH_SHORT).show()
