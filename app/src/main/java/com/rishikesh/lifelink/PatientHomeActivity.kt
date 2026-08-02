@@ -534,6 +534,9 @@ class PatientHomeActivity : AppCompatActivity(), OnMapReadyCallback {
 
                     if (doc.id == currentUid) continue // don't show yourself in your own search
 
+                    val isAvailable = doc.getBoolean("available") ?: true
+                    if (!isAvailable) continue // skip donors who turned availability off
+
                     val lat = doc.getDouble("latitude") ?: continue
                     val lng = doc.getDouble("longitude") ?: continue
 
@@ -825,6 +828,13 @@ class PatientHomeActivity : AppCompatActivity(), OnMapReadyCallback {
         switchAvailability.setOnCheckedChangeListener { _, isChecked ->
             tvAvailabilitySubtitle.text =
                 if (isChecked) "Visible to nearby requests" else "Hidden from nearby requests"
+
+            val uid = FirebaseAuth.getInstance().currentUser?.uid ?: return@setOnCheckedChangeListener
+            db.collection("Users").document(uid)
+                .update("available", isChecked)
+                .addOnFailureListener {
+                    Toast.makeText(this, "Couldn't update availability. Try again.", Toast.LENGTH_SHORT).show()
+                }
         }
     }
 
