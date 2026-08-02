@@ -53,10 +53,10 @@ class DonorAdapter(
             holder.requestButton.setTextColor(android.graphics.Color.WHITE)
             holder.requestButton.isEnabled = true
             holder.requestButton.setOnClickListener {
-//                val currentPos = holder.bindingAdapterPosition
-//                if (currentPos != RecyclerView.NO_POSITION) {
-//                    onRequestClick(donor, currentPos)
-//                }
+                val currentPos = holder.adapterPosition
+                if (currentPos != RecyclerView.NO_POSITION) {
+                    onRequestClick(donor, currentPos)
+                }
             }
         }
     }
