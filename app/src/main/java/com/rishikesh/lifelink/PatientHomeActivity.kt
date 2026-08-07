@@ -454,6 +454,8 @@ class PatientHomeActivity : AppCompatActivity(), OnMapReadyCallback {
     override fun onMapReady(map: GoogleMap) {
         googleMap = map
         googleMap.uiSettings.isZoomControlsEnabled = true
+        googleMap.uiSettings.isMyLocationButtonEnabled = false
+        googleMap.uiSettings.isCompassEnabled = false
 
 //        openDonorDashboard()
 //
@@ -1075,9 +1077,14 @@ class PatientHomeActivity : AppCompatActivity(), OnMapReadyCallback {
             } else {
                 Log.d("LOCATION_DEBUG", "Location NULL")
             }
+
+            // 🔥 Only open the dashboard once location fetch has resolved
+            openDonorDashboard()
+        }.addOnFailureListener {
+            Log.e("LOCATION_DEBUG", "getCurrentLocation failed", it)
+            // Still open the dashboard even if location couldn't be fetched
+            openDonorDashboard()
         }
-        // 🔥 Refresh dashboard when location ready
-        openDonorDashboard()
     }
 
 
