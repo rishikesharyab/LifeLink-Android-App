@@ -757,6 +757,12 @@ class PatientHomeActivity : AppCompatActivity(), OnMapReadyCallback {
         tvAvatar               = root.findViewById(R.id.tvAvatar)
         tvDonorName            = root.findViewById(R.id.tvDonorName)
         tvDonorLocation        = root.findViewById(R.id.locationEt)
+        // Location is auto-filled from GPS/geocoding and should be display-only.
+        tvDonorLocation.isFocusable = false
+        tvDonorLocation.isFocusableInTouchMode = false
+        tvDonorLocation.isClickable = false
+        tvDonorLocation.isCursorVisible = false
+        tvDonorLocation.keyListener = null
         tvBloodGroup           = root.findViewById(R.id.tvBloodGroup)
         tvTotalDonations       = root.findViewById(R.id.tvTotalDonations)
         tvLivesSaved           = root.findViewById(R.id.tvLivesSaved)
