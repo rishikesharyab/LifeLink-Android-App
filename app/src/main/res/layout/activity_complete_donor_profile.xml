@@ -1,5 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:background="#80000000">
@@ -12,35 +13,47 @@
         android:orientation="vertical"
         android:padding="20dp">
 
-        <!-- STEP TEXT -->
-        <TextView
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:id="@+id/stepText"
-            android:text="Step 1 of 3"
-            android:textStyle="bold"
-            android:textSize="14sp"
-            android:layout_marginBottom="8dp" />
-
-        <!-- PROGRESS BAR -->
-        <ProgressBar
-            android:id="@+id/progressBar"
-            style="?android:attr/progressBarStyleHorizontal"
+        <!-- STEP TEXT + LABEL -->
+        <LinearLayout
             android:layout_width="match_parent"
-            android:layout_height="6dp"
-            android:max="3"
-            android:progress="1"
-            android:layout_marginBottom="16dp" />
-
-        <!-- TITLE -->
-        <TextView
-            android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="Complete Donor Profile"
-            android:textSize="20sp"
-            android:textStyle="bold"
-            android:gravity="center"
-            android:layout_marginBottom="20dp" />
+            android:orientation="horizontal"
+            android:layout_marginBottom="10dp">
+
+            <TextView
+                android:id="@+id/stepText"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:text="Step 1 of 3"
+                android:textStyle="bold"
+                android:textSize="13sp"
+                android:textColor="#8B3A1F" />
+
+            <TextView
+                android:id="@+id/stepLabel"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Basic info"
+                android:textSize="13sp"
+                android:alpha="0.7"
+                android:textColor="#8B3A1F" />
+        </LinearLayout>
+
+        <!-- PROGRESS SEGMENTS -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="4dp"
+            android:orientation="horizontal"
+            android:layout_marginBottom="20dp">
+
+            <View android:id="@+id/segment1" android:layout_width="0dp" android:layout_height="match_parent"
+                android:layout_weight="1" android:layout_marginEnd="6dp" android:background="#8B3A1F" />
+            <View android:id="@+id/segment2" android:layout_width="0dp" android:layout_height="match_parent"
+                android:layout_weight="1" android:layout_marginEnd="6dp" android:background="#E4D8C8" />
+            <View android:id="@+id/segment3" android:layout_width="0dp" android:layout_height="match_parent"
+                android:layout_weight="1" android:background="#E4D8C8" />
+        </LinearLayout>
 
         <!-- ================= STEP 1 ================= -->
         <LinearLayout
@@ -50,43 +63,193 @@
             android:orientation="vertical"
             android:visibility="visible">
 
+            <!-- Header -->
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal"
+                android:gravity="center_vertical"
+                android:layout_marginBottom="18dp">
+
+                <FrameLayout
+                    android:layout_width="36dp"
+                    android:layout_height="36dp"
+                    android:background="@drawable/bg_icon_badge">
+                    <ImageView
+                        android:layout_width="18dp"
+                        android:layout_height="18dp"
+                        android:layout_gravity="center"
+                        android:src="@drawable/ic_person"
+                        app:tint="#8B3A1F" />
+                </FrameLayout>
+
+                <LinearLayout
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical"
+                    android:layout_marginStart="10dp">
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="Tell us about you"
+                        android:textSize="16sp"
+                        android:textColor="#2C2C2A" />
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="Takes about a minute"
+                        android:textSize="12sp"
+                        android:textColor="#5F5E5A" />
+                </LinearLayout>
+            </LinearLayout>
+
             <TextView
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:text="Basic Information"
-                android:textStyle="bold"
-                android:layout_marginBottom="8dp" />
+                android:layout_width="wrap_content" android:layout_height="wrap_content"
+                android:text="Full name" android:textSize="12sp" android:textColor="#5F5E5A"
+                android:layout_marginBottom="4dp" />
 
             <EditText
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:id="@+id/nameEt"
-                android:hint="Full Name"
-                android:padding="12dp" />
-
-            <EditText
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:id="@+id/phoneEt"
-                android:hint="Phone Number"
-                android:inputType="phone"
-                android:padding="12dp" />
-
-            <Spinner
-                android:id="@+id/genderSpinner"
                 android:layout_width="match_parent"
                 android:layout_height="48dp"
-                android:layout_marginTop="8dp"
-                android:spinnerMode="dropdown" />
+                android:id="@+id/nameEt"
+                android:hint="Full name"
+                android:background="@drawable/bg_input_field_active"
+                android:drawableStart="@drawable/ic_person"
+                android:drawablePadding="8dp"
+                android:paddingHorizontal="12dp"
+                android:textSize="14sp"
+                android:layout_marginBottom="14dp" />
 
+            <TextView
+                android:layout_width="wrap_content" android:layout_height="wrap_content"
+                android:text="Phone number" android:textSize="12sp" android:textColor="#5F5E5A"
+                android:layout_marginBottom="4dp" />
 
             <EditText
                 android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:id="@+id/ageEt"
-                android:hint="Age"
+                android:layout_height="48dp"
+                android:id="@+id/phoneEt"
+                android:hint="Phone number"
                 android:inputType="number"
-                android:padding="12dp" />
+                android:digits="0123456789"
+                android:maxLength="10"
+                android:background="@drawable/bg_input_field_active"
+                android:drawableStart="@drawable/ic_phone"
+                android:drawablePadding="8dp"
+                android:paddingHorizontal="12dp"
+                android:textSize="14sp"
+                android:layout_marginBottom="14dp" />
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal"
+                android:layout_marginBottom="14dp">
+
+                <LinearLayout
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:orientation="vertical"
+                    android:layout_marginEnd="12dp">
+
+                    <TextView
+                        android:layout_width="wrap_content" android:layout_height="wrap_content"
+                        android:text="Age" android:textSize="12sp" android:textColor="#5F5E5A"
+                        android:layout_marginBottom="4dp" />
+
+                    <EditText
+                        android:layout_width="match_parent"
+                        android:layout_height="48dp"
+                        android:id="@+id/ageEt"
+                        android:hint="Age"
+                        android:inputType="number"
+                        android:background="@drawable/bg_input_field_active"
+                        android:paddingHorizontal="12dp"
+                        android:textSize="14sp" />
+                </LinearLayout>
+
+                <LinearLayout
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:orientation="vertical">
+
+                    <TextView
+                        android:layout_width="wrap_content" android:layout_height="wrap_content"
+                        android:text="Gender" android:textSize="12sp" android:textColor="#5F5E5A"
+                        android:layout_marginBottom="4dp" />
+
+                    <LinearLayout
+                        android:id="@+id/genderBox"
+                        android:layout_width="match_parent"
+                        android:layout_height="48dp"
+                        android:orientation="horizontal"
+                        android:gravity="center_vertical"
+                        android:background="@drawable/bg_input_field_active"
+                        android:paddingHorizontal="12dp"
+                        android:clickable="true"
+                        android:focusable="true">
+
+                        <TextView
+                            android:id="@+id/tvGender"
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_weight="1"
+                            android:text="Select gender"
+                            android:textSize="14sp"
+                            android:textColor="#B4B2A9" />
+
+                        <ImageView
+                            android:layout_width="14dp"
+                            android:layout_height="14dp"
+                            android:src="@drawable/ic_chevron_down" />
+                    </LinearLayout>
+                </LinearLayout>
+            </LinearLayout>
+
+            <TextView
+                android:layout_width="wrap_content" android:layout_height="wrap_content"
+                android:text="Location" android:textSize="12sp" android:textColor="#5F5E5A"
+                android:layout_marginBottom="4dp" />
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="48dp"
+                android:orientation="horizontal"
+                android:gravity="center_vertical"
+                android:background="@drawable/bg_input_field_active"
+                android:paddingHorizontal="12dp">
+
+                <ImageView
+                    android:layout_width="16dp" android:layout_height="16dp"
+                    android:src="@drawable/ic_location_pin"
+                    android:layout_marginEnd="8dp" />
+
+                <EditText
+                    android:id="@+id/locationEt"
+                    android:layout_width="0dp"
+                    android:layout_height="match_parent"
+                    android:layout_weight="1"
+                    android:hint="Detecting location..."
+                    android:background="@null"
+                    android:textSize="14sp"
+                    android:padding="0dp" />
+
+                <TextView
+                    android:id="@+id/tvLocationBadge"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Detected"
+                    android:textSize="11sp"
+                    android:textColor="#0F6E56"
+                    android:background="#E1F5EE"
+                    android:paddingHorizontal="8dp"
+                    android:paddingVertical="2dp"
+                    android:visibility="gone" />
+            </LinearLayout>
         </LinearLayout>
 
         <!-- ================= STEP 2 ================= -->
@@ -97,39 +260,162 @@
             android:orientation="vertical"
             android:visibility="gone">
 
-            <TextView
-                android:layout_width="wrap_content"
+            <LinearLayout
+                android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:text="Medical Information"
-                android:textStyle="bold"
-                android:layout_marginBottom="8dp" />
+                android:orientation="horizontal"
+                android:gravity="center_vertical"
+                android:layout_marginBottom="18dp">
 
-            <Spinner
+                <FrameLayout
+                    android:layout_width="36dp"
+                    android:layout_height="36dp"
+                    android:background="@drawable/bg_icon_badge">
+                    <ImageView
+                        android:layout_width="20dp" android:layout_height="20dp"
+                        android:layout_gravity="center"
+                        android:src="@drawable/ic_stethoscope"
+                        app:tint="#8B3A1F" />
+                </FrameLayout>
+
+                <LinearLayout
+                    android:layout_width="wrap_content" android:layout_height="wrap_content"
+                    android:orientation="vertical" android:layout_marginStart="10dp">
+
+                    <TextView
+                        android:layout_width="wrap_content" android:layout_height="wrap_content"
+                        android:text="A little about your health" android:textSize="16sp" android:textColor="#2C2C2A" />
+
+                    <TextView
+                        android:layout_width="wrap_content" android:layout_height="wrap_content"
+                        android:text="Helps us match you safely" android:textSize="12sp" android:textColor="#5F5E5A" />
+                </LinearLayout>
+            </LinearLayout>
+
+            <TextView
+                android:layout_width="wrap_content" android:layout_height="wrap_content"
+                android:text="Blood group" android:textSize="12sp" android:textColor="#5F5E5A"
+                android:layout_marginBottom="6dp" />
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal"
+                android:layout_marginBottom="8dp">
+
+                <TextView android:id="@+id/chipOPos" android:text="O+" android:layout_width="0dp" android:layout_weight="1" android:layout_height="38dp" android:layout_marginEnd="8dp" android:gravity="center" android:textSize="13sp" android:textColor="#5F5E5A" android:background="@drawable/bg_chip_unselected" android:clickable="true" android:focusable="true" />
+                <TextView android:id="@+id/chipONeg" android:text="O-" android:layout_width="0dp" android:layout_weight="1" android:layout_height="38dp" android:layout_marginEnd="8dp" android:gravity="center" android:textSize="13sp" android:textColor="#5F5E5A" android:background="@drawable/bg_chip_unselected" android:clickable="true" android:focusable="true" />
+                <TextView android:id="@+id/chipAPos" android:text="A+" android:layout_width="0dp" android:layout_weight="1" android:layout_height="38dp" android:layout_marginEnd="8dp" android:gravity="center" android:textSize="13sp" android:textColor="#5F5E5A" android:background="@drawable/bg_chip_unselected" android:clickable="true" android:focusable="true" />
+                <TextView android:id="@+id/chipANeg" android:text="A-" android:layout_width="0dp" android:layout_weight="1" android:layout_height="38dp" android:gravity="center" android:textSize="13sp" android:textColor="#5F5E5A" android:background="@drawable/bg_chip_unselected" android:clickable="true" android:focusable="true" />
+            </LinearLayout>
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal"
+                android:layout_marginBottom="16dp">
+
+                <TextView android:id="@+id/chipBPos" android:text="B+" android:layout_width="0dp" android:layout_weight="1" android:layout_height="38dp" android:layout_marginEnd="8dp" android:gravity="center" android:textSize="13sp" android:textColor="#5F5E5A" android:background="@drawable/bg_chip_unselected" android:clickable="true" android:focusable="true" />
+                <TextView android:id="@+id/chipBNeg" android:text="B-" android:layout_width="0dp" android:layout_weight="1" android:layout_height="38dp" android:layout_marginEnd="8dp" android:gravity="center" android:textSize="13sp" android:textColor="#5F5E5A" android:background="@drawable/bg_chip_unselected" android:clickable="true" android:focusable="true" />
+                <TextView android:id="@+id/chipABPos" android:text="AB+" android:layout_width="0dp" android:layout_weight="1" android:layout_height="38dp" android:layout_marginEnd="8dp" android:gravity="center" android:textSize="13sp" android:textColor="#5F5E5A" android:background="@drawable/bg_chip_unselected" android:clickable="true" android:focusable="true" />
+                <TextView android:id="@+id/chipABNeg" android:text="AB-" android:layout_width="0dp" android:layout_weight="1" android:layout_height="38dp" android:gravity="center" android:textSize="13sp" android:textColor="#5F5E5A" android:background="@drawable/bg_chip_unselected" android:clickable="true" android:focusable="true" />
+            </LinearLayout>
+
+            <LinearLayout
+                android:layout_width="match_parent" android:layout_height="wrap_content"
+                android:orientation="horizontal" android:gravity="center_vertical"
+                android:background="@drawable/bg_option_unselected"
+                android:padding="12dp" android:layout_marginBottom="10dp">
+
+                <ImageView android:layout_width="16dp" android:layout_height="16dp"
+                    android:src="@drawable/ic_heart_outline" android:layout_marginEnd="8dp" />
+
+                <TextView
+                    android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1"
+                    android:text="Currently healthy" android:textSize="14sp" android:textColor="#2C2C2A" />
+
+                <com.google.android.material.switchmaterial.SwitchMaterial
+                    android:id="@+id/healthySwitch"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:checked="true"
+                    app:thumbTint="@color/switch_thumb_tint"
+                    app:trackTint="@color/switch_track_tint" />
+            </LinearLayout>
+
+            <LinearLayout
+                android:layout_width="match_parent" android:layout_height="wrap_content"
+                android:orientation="horizontal" android:gravity="center_vertical"
+                android:background="@drawable/bg_option_unselected"
+                android:padding="12dp" android:layout_marginBottom="16dp">
+
+                <ImageView android:layout_width="16dp" android:layout_height="16dp"
+                    android:src="@drawable/ic_pill" android:layout_marginEnd="8dp" />
+
+                <TextView
+                    android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1"
+                    android:text="On long-term medication" android:textSize="14sp" android:textColor="#2C2C2A" />
+
+                <com.google.android.material.switchmaterial.SwitchMaterial
+                    android:id="@+id/medicationSwitch"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    app:thumbTint="@color/switch_thumb_tint"
+                    app:trackTint="@color/switch_track_tint" />
+            </LinearLayout>
+
+            <TextView
+                android:layout_width="wrap_content" android:layout_height="wrap_content"
+                android:text="Last donation" android:textSize="12sp" android:textColor="#5F5E5A"
+                android:layout_marginBottom="6dp" />
+
+            <LinearLayout
                 android:layout_width="match_parent"
                 android:layout_height="48dp"
-                android:layout_marginTop="8dp"
-                android:id="@+id/bloodSpinner"
-                android:spinnerMode="dropdown"/>
+                android:orientation="horizontal"
+                android:gravity="center_vertical"
+                android:background="@drawable/bg_input_field_active"
+                android:paddingHorizontal="12dp"
+                android:layout_marginBottom="10dp">
 
-            <Switch
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:id="@+id/healthySwitch"
-                android:text="Currently Healthy"
-                android:layout_marginTop="8dp" />
+                <ImageView android:layout_width="16dp" android:layout_height="16dp"
+                    android:src="@drawable/ic_calendar_outline" android:layout_marginEnd="8dp" />
 
-            <Switch
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:id="@+id/medicationSwitch"
-                android:text="On Long-Term Medication" />
+                <EditText
+                    android:id="@+id/lastDonationEt"
+                    android:layout_width="0dp"
+                    android:layout_height="match_parent"
+                    android:layout_weight="1"
+                    android:hint="Last donation date (DD/MM/YYYY)"
+                    android:background="@null"
+                    android:textSize="14sp"
+                    android:focusable="false"
+                    android:clickable="true"
+                    android:padding="0dp" />
 
-            <EditText
-                android:layout_width="match_parent"
+                <ImageView android:layout_width="14dp" android:layout_height="14dp"
+                    android:src="@drawable/ic_chevron_down" />
+            </LinearLayout>
+
+            <LinearLayout
+                android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:id="@+id/lastDonationEt"
-                android:hint="Last Donation Date (DD/MM/YYYY)"
-                android:padding="12dp" />
+                android:orientation="horizontal"
+                android:gravity="center_vertical"
+                android:layout_marginBottom="22dp">
+
+                <androidx.appcompat.widget.AppCompatCheckBox
+                    android:id="@+id/cbNeverDonated"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:button="@drawable/checkbox_selector"
+                    app:buttonTint="@null"
+                    android:background="@null" />
+
+                <TextView
+                    android:layout_width="wrap_content" android:layout_height="wrap_content"
+                    android:text="I have never donated before" android:textSize="13sp" android:textColor="#5F5E5A" />
+            </LinearLayout>
         </LinearLayout>
 
         <!-- ================= STEP 3 ================= -->
@@ -140,48 +426,155 @@
             android:orientation="vertical"
             android:visibility="gone">
 
-            <TextView
-                android:layout_width="wrap_content"
+            <LinearLayout
+                android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:text="Availability"
-                android:textStyle="bold"
+                android:orientation="horizontal"
+                android:gravity="center_vertical"
+                android:layout_marginBottom="18dp">
+
+                <FrameLayout
+                    android:layout_width="36dp"
+                    android:layout_height="36dp"
+                    android:background="@drawable/bg_icon_badge">
+                    <ImageView
+                        android:layout_width="18dp" android:layout_height="18dp"
+                        android:layout_gravity="center"
+                        android:src="@drawable/ic_location_pin"
+                        app:tint="#8B3A1F" />
+                </FrameLayout>
+
+                <LinearLayout
+                    android:layout_width="wrap_content" android:layout_height="wrap_content"
+                    android:orientation="vertical" android:layout_marginStart="10dp">
+
+                    <TextView
+                        android:layout_width="wrap_content" android:layout_height="wrap_content"
+                        android:text="When and where you can help" android:textSize="16sp" android:textColor="#2C2C2A" />
+
+                    <TextView
+                        android:layout_width="wrap_content" android:layout_height="wrap_content"
+                        android:text="Almost done" android:textSize="12sp" android:textColor="#5F5E5A" />
+                </LinearLayout>
+            </LinearLayout>
+
+            <LinearLayout
+                android:layout_width="match_parent" android:layout_height="wrap_content"
+                android:orientation="horizontal" android:gravity="center_vertical"
+                android:background="@drawable/bg_option_unselected"
+                android:padding="12dp" android:layout_marginBottom="18dp">
+
+                <ImageView android:layout_width="16dp" android:layout_height="16dp"
+                    android:src="@drawable/ic_alert_triangle" android:layout_marginEnd="8dp" />
+
+                <LinearLayout
+                    android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1"
+                    android:orientation="vertical">
+
+                    <TextView
+                        android:layout_width="wrap_content" android:layout_height="wrap_content"
+                        android:text="Available for emergency" android:textSize="14sp" android:textColor="#2C2C2A" />
+
+                    <TextView
+                        android:layout_width="wrap_content" android:layout_height="wrap_content"
+                        android:text="Urgent requests reach you first" android:textSize="11sp" android:textColor="#5F5E5A" />
+                </LinearLayout>
+
+                <com.google.android.material.switchmaterial.SwitchMaterial
+                    android:id="@+id/emergencySwitch"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:checked="true"
+                    app:thumbTint="@color/switch_thumb_tint"
+                    app:trackTint="@color/switch_track_tint" />
+            </LinearLayout>
+
+            <TextView
+                android:layout_width="wrap_content" android:layout_height="wrap_content"
+                android:text="Willing to travel" android:textSize="12sp" android:textColor="#5F5E5A"
                 android:layout_marginBottom="8dp" />
 
-            <Switch
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:id="@+id/emergencySwitch"
-                android:text="Available for Emergency" />
+            <LinearLayout
+                android:id="@+id/rowTravel5"
+                android:layout_width="match_parent" android:layout_height="wrap_content"
+                android:orientation="horizontal" android:gravity="center_vertical"
+                android:background="@drawable/bg_option_selected"
+                android:padding="12dp" android:layout_marginBottom="8dp">
 
-            <TextView
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:text="Willing to Travel"
-                android:layout_marginTop="8dp" />
+                <TextView
+                    android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1"
+                    android:text="Up to 5 km" android:textSize="14sp" android:textColor="#2C2C2A" />
 
-            <RadioGroup
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:id="@+id/travelGroup">
+                <View android:id="@+id/radioTravel5" android:layout_width="18dp" android:layout_height="18dp"
+                    android:background="@drawable/radio_circle_selected" />
+            </LinearLayout>
 
-                <RadioButton
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:id="@+id/travel5"
-                    android:text="Up to 5 km" />
+            <LinearLayout
+                android:id="@+id/rowTravel10"
+                android:layout_width="match_parent" android:layout_height="wrap_content"
+                android:orientation="horizontal" android:gravity="center_vertical"
+                android:background="@drawable/bg_option_unselected"
+                android:padding="12dp" android:layout_marginBottom="8dp">
 
-                <RadioButton
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:id="@+id/travel10"
-                    android:text="Up to 10 km" />
+                <TextView
+                    android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1"
+                    android:text="Up to 10 km" android:textSize="14sp" android:textColor="#5F5E5A" />
 
-                <RadioButton
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:id="@+id/travel20"
-                    android:text="Up to 20 km" />
-            </RadioGroup>
+                <View android:id="@+id/radioTravel10" android:layout_width="18dp" android:layout_height="18dp"
+                    android:background="@drawable/radio_circle_unselected" />
+            </LinearLayout>
+
+            <LinearLayout
+                android:id="@+id/rowTravel20"
+                android:layout_width="match_parent" android:layout_height="wrap_content"
+                android:orientation="horizontal" android:gravity="center_vertical"
+                android:background="@drawable/bg_option_unselected"
+                android:padding="12dp" android:layout_marginBottom="22dp">
+
+                <TextView
+                    android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1"
+                    android:text="Up to 20 km" android:textSize="14sp" android:textColor="#5F5E5A" />
+
+                <View android:id="@+id/radioTravel20" android:layout_width="18dp" android:layout_height="18dp"
+                    android:background="@drawable/radio_circle_unselected" />
+            </LinearLayout>
+
+            <!-- Summary card -->
+            <LinearLayout
+                android:layout_width="match_parent" android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:background="@drawable/bg_option_unselected"
+                android:padding="14dp" android:layout_marginBottom="22dp">
+
+                <TextView
+                    android:layout_width="wrap_content" android:layout_height="wrap_content"
+                    android:text="Profile summary" android:textSize="12sp" android:textColor="#5F5E5A"
+                    android:layout_marginBottom="8dp" />
+
+                <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content"
+                    android:orientation="horizontal" android:paddingVertical="3dp">
+                    <TextView android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1"
+                        android:text="Blood group" android:textSize="12sp" android:textColor="#2C2C2A" />
+                    <TextView android:id="@+id/tvSummaryBloodGroup" android:layout_width="wrap_content" android:layout_height="wrap_content"
+                        android:text="—" android:textSize="12sp" android:textColor="#2C2C2A" />
+                </LinearLayout>
+
+                <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content"
+                    android:orientation="horizontal" android:paddingVertical="3dp">
+                    <TextView android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1"
+                        android:text="Location" android:textSize="12sp" android:textColor="#2C2C2A" />
+                    <TextView android:id="@+id/tvSummaryLocation" android:layout_width="wrap_content" android:layout_height="wrap_content"
+                        android:text="—" android:textSize="12sp" android:textColor="#2C2C2A" />
+                </LinearLayout>
+
+                <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content"
+                    android:orientation="horizontal" android:paddingVertical="3dp">
+                    <TextView android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1"
+                        android:text="Travel range" android:textSize="12sp" android:textColor="#2C2C2A" />
+                    <TextView android:id="@+id/tvSummaryTravel" android:layout_width="wrap_content" android:layout_height="wrap_content"
+                        android:text="5 km" android:textSize="12sp" android:textColor="#2C2C2A" />
+                </LinearLayout>
+            </LinearLayout>
         </LinearLayout>
 
         <!-- ================= BUTTONS ================= -->
@@ -189,28 +582,58 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:orientation="horizontal"
-            android:gravity="end"
             android:layout_marginTop="20dp">
 
-            <Button
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
+            <com.google.android.material.button.MaterialButton
+                android:layout_width="0dp"
+                android:layout_height="48dp"
+                android:layout_weight="1"
                 android:id="@+id/backBtn"
+                android:insetTop="0dp"
+                android:insetBottom="0dp"
+                android:background="@drawable/bg_ngo_card"
+                app:backgroundTint="@null"
+                android:textColor="#2C2C2A"
                 android:text="Back"
+                app:icon="@drawable/ic_arrow_left"
+                app:iconTint="#2C2C2A"
+                app:iconGravity="textStart"
+                app:iconPadding="6dp"
                 android:visibility="gone"
-                android:layout_marginEnd="8dp" />
+                android:layout_marginEnd="10dp" />
 
-            <Button
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
+            <com.google.android.material.button.MaterialButton
+                android:layout_width="0dp"
+                android:layout_height="48dp"
+                android:layout_weight="2"
                 android:id="@+id/nextBtn"
-                android:text="Next" />
+                android:insetTop="0dp"
+                android:insetBottom="0dp"
+                android:background="@drawable/bg_button_primary"
+                app:backgroundTint="@null"
+                android:textColor="#FFFFFF"
+                android:text="Continue"
+                app:icon="@drawable/ic_arrow_right"
+                app:iconTint="#FFFFFF"
+                app:iconGravity="textEnd"
+                app:iconPadding="6dp" />
 
-            <Button
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
+            <com.google.android.material.button.MaterialButton
+                android:layout_width="0dp"
+                android:layout_height="48dp"
+                android:layout_weight="2"
                 android:id="@+id/saveBtn"
-                android:text="Save Profile"
+                android:insetTop="0dp"
+                android:insetBottom="0dp"
+                android:background="@drawable/bg_button_primary"
+                app:backgroundTint="@null"
+                android:textColor="#FFFFFF"
+                android:text="Save profile"
+                app:icon="@drawable/ic_check"
+                app:iconSize="28dp"
+                app:iconTint="#FFFFFF"
+                app:iconGravity="textStart"
+                app:iconPadding="6dp"
                 android:visibility="gone" />
         </LinearLayout>
 

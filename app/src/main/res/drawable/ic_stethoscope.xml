@@ -1,0 +1,37 @@
+<?xml version="1.0" encoding="utf-8"?>
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="24dp" android:height="24dp" android:viewportWidth="24" android:viewportHeight="24">
+
+    <!-- left ear tube -->
+    <path
+        android:strokeColor="#8B3A1F"
+        android:strokeWidth="1.6"
+        android:fillColor="#00000000"
+        android:pathData="M6,3 V6 A3,3 0 0,0 9,9 H10" />
+
+    <!-- right ear tube -->
+    <path
+        android:strokeColor="#8B3A1F"
+        android:strokeWidth="1.6"
+        android:fillColor="#00000000"
+        android:pathData="M18,3 V6 A3,3 0 0,1 15,9 H14" />
+
+    <!-- ear tips -->
+    <path android:fillColor="#8B3A1F" android:pathData="M6,3 m-1.2,0 a1.2,1.2 0 1,0 2.4,0 a1.2,1.2 0 1,0 -2.4,0" />
+    <path android:fillColor="#8B3A1F" android:pathData="M18,3 m-1.2,0 a1.2,1.2 0 1,0 2.4,0 a1.2,1.2 0 1,0 -2.4,0" />
+
+    <!-- tube down to chest piece -->
+    <path
+        android:strokeColor="#8B3A1F"
+        android:strokeWidth="1.6"
+        android:fillColor="#00000000"
+        android:pathData="M12,9 V13 A4,4 0 0,0 16,17" />
+
+    <!-- chest piece -->
+    <path
+        android:strokeColor="#8B3A1F"
+        android:strokeWidth="1.6"
+        android:fillColor="#00000000"
+        android:pathData="M16,17 m-2.3,0 a2.3,2.3 0 1,0 4.6,0 a2.3,2.3 0 1,0 -4.6,0" />
+
+</vector>
