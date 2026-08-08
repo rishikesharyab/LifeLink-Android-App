@@ -114,7 +114,6 @@
         android:id="@+id/bottomSheet"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:layout_marginBottom="70dp"
         android:paddingBottom="70dp"
         android:orientation="vertical"
         android:background="@drawable/bg_bottom_sheet"
@@ -146,9 +145,8 @@
             android:id="@+id/donorRecyclerView"
             android:layout_width="match_parent"
             android:layout_height="0dp"
-            android:paddingBottom="80dp"
+            android:paddingBottom="8dp"
             android:clipToPadding="false"
-            android:layout_marginBottom="90dp"
             android:layout_weight="1"
             android:padding="8dp"/>
 
@@ -164,7 +162,6 @@
             android:padding="16dp"
             android:layout_marginStart="16dp"
             android:layout_marginEnd="16dp"
-            android:layout_marginBottom="90dp"
             android:background="@drawable/bg_stat_card"
             android:visibility="gone"/>
 

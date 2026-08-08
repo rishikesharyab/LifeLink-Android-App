@@ -172,6 +172,10 @@ class PatientHomeActivity : AppCompatActivity(), OnMapReadyCallback {
         bottomSheetBehavior.peekHeight = 380
         bottomSheetBehavior.isHideable = true
         bottomSheetBehavior.isDraggable = true
+        // Cap the expanded donor list at 70% of screen height so it never
+        // reaches up under the search bar. maxHeight is used (not expandedOffset)
+        // since expandedOffset is silently ignored under fitToContents=true.
+        bottomSheetBehavior.maxHeight = (resources.displayMetrics.heightPixels * 0.75).toInt()
         bottomSheetBehavior.state = BottomSheetBehavior.STATE_HIDDEN
 
         // ⬆️ Bottom Sheet (donor dashboard — replaces DonorBottomSheetFragment dialog)
