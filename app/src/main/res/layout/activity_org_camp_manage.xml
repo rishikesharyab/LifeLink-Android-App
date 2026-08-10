@@ -124,25 +124,45 @@
 
     </LinearLayout>
 
-    <androidx.recyclerview.widget.RecyclerView
-        android:id="@+id/rvApplications"
+    <!-- ── CONTENT: two overlapping RecyclerViews for a true simultaneous
+         slide-out/slide-in transition (no adapter-swap flash, no stale-view
+         overlap) ── -->
+    <FrameLayout
         android:layout_width="match_parent"
         android:layout_height="0dp"
         android:layout_weight="1"
-        android:clipToPadding="false"
-        android:paddingStart="16dp"
-        android:paddingEnd="16dp"
-        android:paddingBottom="16dp"/>
+        android:clipChildren="false">
 
-    <TextView
-        android:id="@+id/tvNoApplications"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:text="No applications yet."
-        android:textSize="13sp"
-        android:textColor="@color/text_secondary"
-        android:gravity="center"
-        android:padding="24dp"
-        android:visibility="gone"/>
+        <androidx.recyclerview.widget.RecyclerView
+            android:id="@+id/rvApplicationsPrimary"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:clipToPadding="false"
+            android:paddingStart="16dp"
+            android:paddingEnd="16dp"
+            android:paddingBottom="16dp"/>
+
+        <androidx.recyclerview.widget.RecyclerView
+            android:id="@+id/rvApplicationsSecondary"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:clipToPadding="false"
+            android:paddingStart="16dp"
+            android:paddingEnd="16dp"
+            android:paddingBottom="16dp"/>
+
+        <TextView
+            android:id="@+id/tvNoApplications"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_gravity="center"
+            android:text="No applications yet."
+            android:textSize="13sp"
+            android:textColor="@color/text_secondary"
+            android:gravity="center"
+            android:padding="24dp"
+            android:visibility="gone"/>
+
+    </FrameLayout>
 
 </LinearLayout>

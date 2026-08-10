@@ -4,6 +4,10 @@ import android.content.Intent
 import android.net.Uri
 import android.os.Bundle
 import android.util.Log
+import android.view.GestureDetector
+import android.view.MotionEvent
+import android.view.View
+import android.view.animation.DecelerateInterpolator
 import android.widget.ImageView
 import android.widget.TextView
 import android.widget.Toast
@@ -15,20 +19,36 @@ import com.google.firebase.Timestamp
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FirebaseFirestore
 import com.rishikesh.lifelink.model.BloodRequest
+import kotlin.math.abs
 
 class SendRequestActivity : AppCompatActivity() {
 
     private val auth = FirebaseAuth.getInstance()
     private val db = FirebaseFirestore.getInstance()
 
-    private lateinit var recyclerView: RecyclerView
+    private lateinit var rvPrimary: RecyclerView
+    private lateinit var rvSecondary: RecyclerView
     private lateinit var tvNoRequests: TextView
     private lateinit var tabSent: TextView
     private lateinit var tabAccepted: TextView
+    private lateinit var gestureDetector: GestureDetector
 
     private var sentRequests: List<BloodRequest> = emptyList()
     private var acceptedRequests: List<BloodRequest> = emptyList()
+    private var acceptedDonorPhones: Map<String, String> = emptyMap()
     private var showingSentTab = true
+
+    // Which physical RecyclerView is currently the visible ("front") one.
+    // The other is parked off-screen AND set to GONE — so even if translationX
+    // math is ever slightly off, the parked view still cannot render or overlap.
+    private var frontIsPrimary = true
+    private val frontRv: RecyclerView get() = if (frontIsPrimary) rvPrimary else rvSecondary
+    private val backRv: RecyclerView get() = if (frontIsPrimary) rvSecondary else rvPrimary
+
+    private var isSwitchingTab = false
+    private var isDragging = false
+
+    private val screenWidth: Float by lazy { resources.displayMetrics.widthPixels.toFloat() }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -37,8 +57,16 @@ class SendRequestActivity : AppCompatActivity() {
 
         findViewById<ImageView>(R.id.ivSendRequestBack).setOnClickListener { finish() }
 
-        recyclerView = findViewById(R.id.rvRequests)
-        recyclerView.layoutManager = LinearLayoutManager(this)
+        rvPrimary = findViewById(R.id.rvRequestsPrimary)
+        rvSecondary = findViewById(R.id.rvRequestsSecondary)
+        rvPrimary.layoutManager = LinearLayoutManager(this)
+        rvSecondary.layoutManager = LinearLayoutManager(this)
+
+        // Park the back view off-screen AND hide it — belt and braces so it
+        // can never visually overlap the front view, regardless of translation state.
+        rvSecondary.translationX = screenWidth
+        rvSecondary.visibility = View.GONE
+
         tvNoRequests = findViewById(R.id.tvNoRequests)
 
         tabSent = findViewById(R.id.tabSent)
@@ -47,17 +75,210 @@ class SendRequestActivity : AppCompatActivity() {
         tabSent.setOnClickListener { selectTab(sent = true) }
         tabAccepted.setOnClickListener { selectTab(sent = false) }
 
+        setupSwipeGesture()
+
         loadRequests()
     }
 
+    // ── Swipe handling ────────────────────────────────────────────────────────
+
+    private fun setupSwipeGesture() {
+        gestureDetector = GestureDetector(this, object : GestureDetector.SimpleOnGestureListener() {
+
+            override fun onDown(e: MotionEvent): Boolean = true
+
+            // Live-follow the finger so dragging feels tracked, not just detected after the fact
+            override fun onScroll(
+                e1: MotionEvent?,
+                e2: MotionEvent,
+                distanceX: Float,
+                distanceY: Float
+            ): Boolean {
+                if (e1 == null || isSwitchingTab) return false
+
+                val totalDeltaX = e2.x - e1.x
+                val totalDeltaY = e2.y - e1.y
+
+                if (abs(totalDeltaX) < 24 || abs(totalDeltaX) <= abs(totalDeltaY)) return false
+
+                val draggingLeftPastEnd = totalDeltaX < 0 && !showingSentTab
+                val draggingRightPastStart = totalDeltaX > 0 && showingSentTab
+                if (draggingLeftPastEnd || draggingRightPastStart) return false
+
+                isDragging = true
+                frontRv.parent.requestDisallowInterceptTouchEvent(true)
+
+                val clamped = totalDeltaX.coerceIn(-screenWidth * 0.6f, screenWidth * 0.6f)
+                frontRv.translationX = clamped
+
+                return true
+            }
+
+            override fun onFling(
+                e1: MotionEvent?,
+                e2: MotionEvent,
+                velocityX: Float,
+                velocityY: Float
+            ): Boolean {
+                if (e1 == null || isSwitchingTab) return false
+                val deltaX = e2.x - e1.x
+                val deltaY = e2.y - e1.y
+
+                if (abs(deltaX) <= abs(deltaY)) return false
+                if (abs(deltaX) < 60 && abs(velocityX) < 300) {
+                    snapBack()
+                    return false
+                }
+
+                if (deltaX < 0 && showingSentTab) {
+                    selectTab(sent = false)
+                    return true
+                } else if (deltaX > 0 && !showingSentTab) {
+                    selectTab(sent = true)
+                    return true
+                }
+
+                snapBack()
+                return false
+            }
+        })
+
+        val swipeTouchListener = object : RecyclerView.OnItemTouchListener {
+            override fun onInterceptTouchEvent(rv: RecyclerView, e: MotionEvent): Boolean {
+                if (rv !== frontRv || isSwitchingTab) return false
+                gestureDetector.onTouchEvent(e)
+                if (e.action == MotionEvent.ACTION_UP || e.action == MotionEvent.ACTION_CANCEL) {
+                    // isSwitchingTab may have just been set to true by onFling()
+                    // above (on this very event) if the swipe committed to a tab
+                    // switch — in that case we must NOT snap the outgoing view
+                    // back, or it cancels the exit animation selectTab() just started.
+                    if (isDragging && !isSwitchingTab) snapBack()
+                    isDragging = false
+                }
+                return isDragging
+            }
+
+            override fun onTouchEvent(rv: RecyclerView, e: MotionEvent) {
+                if (rv !== frontRv) return
+                gestureDetector.onTouchEvent(e)
+                if (e.action == MotionEvent.ACTION_UP || e.action == MotionEvent.ACTION_CANCEL) {
+                    if (isDragging && !isSwitchingTab) snapBack()
+                    isDragging = false
+                }
+            }
+
+            override fun onRequestDisallowInterceptTouchEvent(disallowIntercept: Boolean) {}
+        }
+
+        rvPrimary.addOnItemTouchListener(swipeTouchListener)
+        rvSecondary.addOnItemTouchListener(swipeTouchListener)
+    }
+
+    private fun snapBack() {
+        frontRv.animate()
+            .translationX(0f)
+            .setDuration(180)
+            .setInterpolator(DecelerateInterpolator())
+            .start()
+    }
+
+    // ── Tab switching: both views animate together, parked view is GONE ────────
+
     private fun selectTab(sent: Boolean) {
+        if (showingSentTab == sent) {
+            snapBack()
+            return
+        }
+        if (isSwitchingTab) return
+
         showingSentTab = sent
+        updateTabColors(sent)
+
+        val incoming = backRv
+        val outgoing = frontRv
+
+        // Cancel any stray in-flight animations before starting fresh ones,
+        // so a previous interrupted transition can't leave stale end-state.
+        incoming.animate().cancel()
+        outgoing.animate().cancel()
+
+        val isEmpty = bindTab(incoming, sent)
+
+        isSwitchingTab = true
+        tvNoRequests.visibility = View.GONE
+
+        // Accepted sits to the right of Sent in the tab bar
+        val incomingFromRight = !sent
+        val startX = if (incomingFromRight) screenWidth else -screenWidth
+        val exitX = if (incomingFromRight) -screenWidth else screenWidth
+
+        // Make the incoming view visible and positioned off-screen BEFORE
+        // it starts animating in — it must never be GONE while translating.
+        incoming.translationX = startX
+        incoming.visibility = View.VISIBLE
+
+        incoming.animate()
+            .translationX(0f)
+            .setDuration(260)
+            .setInterpolator(DecelerateInterpolator())
+            .start()
+
+        outgoing.animate()
+            .translationX(exitX)
+            .setDuration(260)
+            .setInterpolator(DecelerateInterpolator())
+            .withEndAction {
+                // Hide the outgoing view completely once parked — this is what
+                // guarantees it can never show through underneath the new tab,
+                // regardless of translationX precision.
+                outgoing.visibility = View.GONE
+                frontIsPrimary = !frontIsPrimary
+                isSwitchingTab = false
+                tvNoRequests.visibility = if (isEmpty) View.VISIBLE else View.GONE
+            }
+            .start()
+    }
+
+    private fun updateTabColors(sent: Boolean) {
         tabSent.background = getDrawable(if (sent) R.drawable.bg_tab_selected else R.drawable.bg_tab_unselected)
         tabSent.setTextColor(getColor(if (sent) R.color.coral_800 else R.color.text_secondary))
         tabAccepted.background = getDrawable(if (!sent) R.drawable.bg_tab_selected else R.drawable.bg_tab_unselected)
         tabAccepted.setTextColor(getColor(if (!sent) R.color.coral_800 else R.color.text_secondary))
-        renderCurrentTab()
     }
+
+    /** Binds the given tab's data into [rv]. Returns true if that tab's list is empty. */
+    private fun bindTab(rv: RecyclerView, sent: Boolean): Boolean {
+        return if (sent) {
+            rv.adapter = SentRequestAdapter(sentRequests) { request, position ->
+                resendRequest(request, position)
+            }
+            sentRequests.isEmpty()
+        } else {
+            rv.adapter = AcceptedRequestAdapter(
+                acceptedRequests,
+                acceptedDonorPhones,
+                onCallClick = { request ->
+                    val number = acceptedDonorPhones[request.toUserId]
+                    if (number.isNullOrBlank() || number == "Phone unavailable") {
+                        Toast.makeText(this, "Phone number unavailable", Toast.LENGTH_SHORT).show()
+                    } else {
+                        startActivity(Intent(Intent.ACTION_DIAL, Uri.parse("tel:$number")))
+                    }
+                },
+                onMarkDonatedClick = { request, position ->
+                    confirmMarkAsDonated(request, position)
+                }
+            )
+            acceptedRequests.isEmpty()
+        }
+    }
+
+    private fun renderFront() {
+        val isEmpty = bindTab(frontRv, showingSentTab)
+        tvNoRequests.visibility = if (isEmpty) View.VISIBLE else View.GONE
+    }
+
+    // ── Data loading ─────────────────────────────────────────────────────────
 
     private fun loadRequests() {
         val uid = auth.currentUser?.uid
@@ -92,37 +313,22 @@ class SendRequestActivity : AppCompatActivity() {
                 sentRequests = all.filter { it.status != BloodRequest.STATUS_ACCEPTED }
                 acceptedRequests = all.filter { it.status == BloodRequest.STATUS_ACCEPTED }
 
-                renderCurrentTab()
+                // Fetch donor phones up front (not lazily on tab switch) so the
+                // Accepted tab's content is ready before any swipe animation starts.
+                loadDonorPhonesThenRender()
             }
             .addOnFailureListener {
                 Toast.makeText(this, "Couldn't load requests", Toast.LENGTH_SHORT).show()
             }
     }
 
-    private fun renderCurrentTab() {
-        if (showingSentTab) {
-            if (sentRequests.isEmpty()) {
-                showEmpty()
-            } else {
-                showList()
-                recyclerView.adapter = SentRequestAdapter(sentRequests) { request, position ->
-                    resendRequest(request, position)
-                }
-            }
-        } else {
-            if (acceptedRequests.isEmpty()) {
-                showEmpty()
-            } else {
-                showList()
-                loadDonorPhonesAndRenderAccepted()
-            }
-        }
-    }
-
-    /** Accepted tab needs a live phone lookup — fetched fresh rather than trusting a stored copy. */
-    private fun loadDonorPhonesAndRenderAccepted() {
+    private fun loadDonorPhonesThenRender() {
         val donorIds = acceptedRequests.map { it.toUserId }.distinct()
-        if (donorIds.isEmpty()) return
+        if (donorIds.isEmpty()) {
+            acceptedDonorPhones = emptyMap()
+            renderFront()
+            return
+        }
 
         val phones = mutableMapOf<String, String>()
         var remaining = donorIds.size
@@ -132,31 +338,19 @@ class SendRequestActivity : AppCompatActivity() {
                 .addOnSuccessListener { doc ->
                     phones[donorId] = doc.getString("phone") ?: "Phone unavailable"
                     remaining--
-                    if (remaining == 0) bindAcceptedAdapter(phones)
+                    if (remaining == 0) {
+                        acceptedDonorPhones = phones
+                        renderFront()
+                    }
                 }
                 .addOnFailureListener {
                     remaining--
-                    if (remaining == 0) bindAcceptedAdapter(phones)
+                    if (remaining == 0) {
+                        acceptedDonorPhones = phones
+                        renderFront()
+                    }
                 }
         }
-    }
-
-    private fun bindAcceptedAdapter(phones: Map<String, String>) {
-        recyclerView.adapter = AcceptedRequestAdapter(
-            acceptedRequests,
-            phones,
-            onCallClick = { request ->
-                val number = phones[request.toUserId]
-                if (number.isNullOrBlank() || number == "Phone unavailable") {
-                    Toast.makeText(this, "Phone number unavailable", Toast.LENGTH_SHORT).show()
-                } else {
-                    startActivity(Intent(Intent.ACTION_DIAL, Uri.parse("tel:$number")))
-                }
-            },
-            onMarkDonatedClick = { request, position ->
-                confirmMarkAsDonated(request, position)
-            }
-        )
     }
 
     private fun confirmMarkAsDonated(request: BloodRequest, position: Int) {
@@ -191,15 +385,6 @@ class SendRequestActivity : AppCompatActivity() {
             }
     }
 
-    /**
-     * Marks a donor as having donated for this request. This does three things:
-     * 1. Flags the BloodRequests doc as donated (so the button stays "Donated ✓")
-     * 2. Adds a record to Users/{donorId}/donations — the same subcollection
-     *    DonationHistoryActivity reads from, so it shows up on the donor's account
-     * 3. Increments the donor's totalDonations and updates lastDonationDate on
-     *    their Users doc, so their profile stats/badge and next-eligible-date
-     *    calculations stay accurate
-     */
     private fun markAsDonated(request: BloodRequest, position: Int) {
         val docId = BloodRequest.docId(request.fromUserId, request.toUserId)
         val now = Timestamp.now()
@@ -213,7 +398,6 @@ class SendRequestActivity : AppCompatActivity() {
             )
             .addOnSuccessListener {
 
-                // Add to the donor's donation history
                 val donationRecord = hashMapOf(
                     "date" to now,
                     "campName" to "Direct request",
@@ -240,7 +424,6 @@ class SendRequestActivity : AppCompatActivity() {
                         ).show()
                     }
 
-                // Bump the donor's stats
                 db.collection("Users")
                     .document(request.toUserId)
                     .update(
@@ -258,20 +441,10 @@ class SendRequestActivity : AppCompatActivity() {
                     if (it.id == request.id) it.copy(donated = true) else it
                 }
                 Toast.makeText(this, "${request.toUserName} marked as donated", Toast.LENGTH_SHORT).show()
-                renderCurrentTab()
+                renderFront()
             }
             .addOnFailureListener { e ->
                 Toast.makeText(this, "Couldn't update. Try again. (${e.message})", Toast.LENGTH_SHORT).show()
             }
-    }
-
-    private fun showEmpty() {
-        recyclerView.visibility = android.view.View.GONE
-        tvNoRequests.visibility = android.view.View.VISIBLE
-    }
-
-    private fun showList() {
-        recyclerView.visibility = android.view.View.VISIBLE
-        tvNoRequests.visibility = android.view.View.GONE
     }
 }

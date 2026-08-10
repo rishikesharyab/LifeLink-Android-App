@@ -2,6 +2,10 @@ package com.rishikesh.lifelink
 
 import android.app.DatePickerDialog
 import android.os.Bundle
+import android.view.GestureDetector
+import android.view.MotionEvent
+import android.view.View
+import android.view.animation.DecelerateInterpolator
 import android.widget.ImageView
 import android.widget.TextView
 import android.widget.Toast
@@ -16,15 +20,16 @@ import com.rishikesh.lifelink.model.BloodCamp
 import com.rishikesh.lifelink.model.CampApplication
 import java.text.SimpleDateFormat
 import java.util.Calendar
-import java.util.Date
 import java.util.Locale
+import kotlin.math.abs
 
 class OrgCampManageActivity : AppCompatActivity() {
 
     private val db = FirebaseFirestore.getInstance()
     private lateinit var camp: BloodCamp
 
-    private lateinit var recyclerView: RecyclerView
+    private lateinit var rvPrimary: RecyclerView
+    private lateinit var rvSecondary: RecyclerView
     private lateinit var tvNoApplications: TextView
     private lateinit var tabApplications: TextView
     private lateinit var tabDonated: TextView
@@ -32,6 +37,7 @@ class OrgCampManageActivity : AppCompatActivity() {
     private lateinit var btnFromDate: TextView
     private lateinit var btnToDate: TextView
     private lateinit var btnClearDateFilter: TextView
+    private lateinit var gestureDetector: GestureDetector
 
     private var pendingApplications: List<CampApplication> = emptyList()
     private var donatedApplications: List<CampApplication> = emptyList()
@@ -41,6 +47,18 @@ class OrgCampManageActivity : AppCompatActivity() {
     private var toDateMillis: Long? = null
 
     private val dateFormat = SimpleDateFormat("MMM dd, yyyy", Locale.getDefault())
+
+    // Which physical RecyclerView is currently the visible ("front") one.
+    // The other is parked off-screen AND set to GONE, so it can never show
+    // through underneath the front view regardless of translationX precision.
+    private var frontIsPrimary = true
+    private val frontRv: RecyclerView get() = if (frontIsPrimary) rvPrimary else rvSecondary
+    private val backRv: RecyclerView get() = if (frontIsPrimary) rvSecondary else rvPrimary
+
+    private var isSwitchingTab = false
+    private var isDragging = false
+
+    private val screenWidth: Float by lazy { resources.displayMetrics.widthPixels.toFloat() }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -52,8 +70,14 @@ class OrgCampManageActivity : AppCompatActivity() {
         findViewById<ImageView>(R.id.ivManageCampBack).setOnClickListener { finish() }
         findViewById<TextView>(R.id.tvManageCampTitle).text = camp.campName.ifBlank { "Manage camp" }
 
-        recyclerView = findViewById(R.id.rvApplications)
-        recyclerView.layoutManager = LinearLayoutManager(this)
+        rvPrimary = findViewById(R.id.rvApplicationsPrimary)
+        rvSecondary = findViewById(R.id.rvApplicationsSecondary)
+        rvPrimary.layoutManager = LinearLayoutManager(this)
+        rvSecondary.layoutManager = LinearLayoutManager(this)
+
+        rvSecondary.translationX = screenWidth
+        rvSecondary.visibility = View.GONE
+
         tvNoApplications = findViewById(R.id.tvNoApplications)
 
         tabApplications = findViewById(R.id.tabApplications)
@@ -73,23 +97,199 @@ class OrgCampManageActivity : AppCompatActivity() {
             toDateMillis = null
             btnFromDate.text = "From date"
             btnToDate.text = "To date"
-            renderCurrentTab()
+            renderFront()
         }
+
+        setupSwipeGesture()
 
         loadApplications()
     }
 
+    // ── Swipe handling ────────────────────────────────────────────────────────
+
+    private fun setupSwipeGesture() {
+        gestureDetector = GestureDetector(this, object : GestureDetector.SimpleOnGestureListener() {
+
+            override fun onDown(e: MotionEvent): Boolean = true
+
+            override fun onScroll(
+                e1: MotionEvent?,
+                e2: MotionEvent,
+                distanceX: Float,
+                distanceY: Float
+            ): Boolean {
+                if (e1 == null || isSwitchingTab) return false
+
+                val totalDeltaX = e2.x - e1.x
+                val totalDeltaY = e2.y - e1.y
+
+                if (abs(totalDeltaX) < 24 || abs(totalDeltaX) <= abs(totalDeltaY)) return false
+
+                val draggingLeftPastEnd = totalDeltaX < 0 && !showingApplicationsTab
+                val draggingRightPastStart = totalDeltaX > 0 && showingApplicationsTab
+                if (draggingLeftPastEnd || draggingRightPastStart) return false
+
+                isDragging = true
+                frontRv.parent.requestDisallowInterceptTouchEvent(true)
+
+                val clamped = totalDeltaX.coerceIn(-screenWidth * 0.6f, screenWidth * 0.6f)
+                frontRv.translationX = clamped
+
+                return true
+            }
+
+            override fun onFling(
+                e1: MotionEvent?,
+                e2: MotionEvent,
+                velocityX: Float,
+                velocityY: Float
+            ): Boolean {
+                if (e1 == null || isSwitchingTab) return false
+                val deltaX = e2.x - e1.x
+                val deltaY = e2.y - e1.y
+
+                if (abs(deltaX) <= abs(deltaY)) return false
+                if (abs(deltaX) < 60 && abs(velocityX) < 300) {
+                    snapBack()
+                    return false
+                }
+
+                if (deltaX < 0 && showingApplicationsTab) {
+                    selectTab(applications = false)
+                    return true
+                } else if (deltaX > 0 && !showingApplicationsTab) {
+                    selectTab(applications = true)
+                    return true
+                }
+
+                snapBack()
+                return false
+            }
+        })
+
+        val swipeTouchListener = object : RecyclerView.OnItemTouchListener {
+            override fun onInterceptTouchEvent(rv: RecyclerView, e: MotionEvent): Boolean {
+                if (rv !== frontRv || isSwitchingTab) return false
+                gestureDetector.onTouchEvent(e)
+                if (e.action == MotionEvent.ACTION_UP || e.action == MotionEvent.ACTION_CANCEL) {
+                    // isSwitchingTab may have just been set true by onFling() above
+                    // (on this very event) — if so, don't snap the outgoing view
+                    // back, or it cancels the exit animation selectTab() just started.
+                    if (isDragging && !isSwitchingTab) snapBack()
+                    isDragging = false
+                }
+                return isDragging
+            }
+
+            override fun onTouchEvent(rv: RecyclerView, e: MotionEvent) {
+                if (rv !== frontRv) return
+                gestureDetector.onTouchEvent(e)
+                if (e.action == MotionEvent.ACTION_UP || e.action == MotionEvent.ACTION_CANCEL) {
+                    if (isDragging && !isSwitchingTab) snapBack()
+                    isDragging = false
+                }
+            }
+
+            override fun onRequestDisallowInterceptTouchEvent(disallowIntercept: Boolean) {}
+        }
+
+        rvPrimary.addOnItemTouchListener(swipeTouchListener)
+        rvSecondary.addOnItemTouchListener(swipeTouchListener)
+    }
+
+    private fun snapBack() {
+        frontRv.animate()
+            .translationX(0f)
+            .setDuration(180)
+            .setInterpolator(DecelerateInterpolator())
+            .start()
+    }
+
+    // ── Tab switching: both views animate together, parked view is GONE ────────
+
     private fun selectTab(applications: Boolean) {
+        if (showingApplicationsTab == applications) {
+            snapBack()
+            return
+        }
+        if (isSwitchingTab) return
+
         showingApplicationsTab = applications
+        updateTabColors(applications)
+        dateFilterRow.visibility = if (applications) View.GONE else View.VISIBLE
+
+        val incoming = backRv
+        val outgoing = frontRv
+
+        incoming.animate().cancel()
+        outgoing.animate().cancel()
+
+        val (isEmpty, emptyMessage) = bindTab(incoming, applications)
+
+        isSwitchingTab = true
+        tvNoApplications.visibility = View.GONE
+
+        // Donated sits to the right of Applications in the tab bar
+        val incomingFromRight = !applications
+        val startX = if (incomingFromRight) screenWidth else -screenWidth
+        val exitX = if (incomingFromRight) -screenWidth else screenWidth
+
+        incoming.translationX = startX
+        incoming.visibility = View.VISIBLE
+
+        incoming.animate()
+            .translationX(0f)
+            .setDuration(260)
+            .setInterpolator(DecelerateInterpolator())
+            .start()
+
+        outgoing.animate()
+            .translationX(exitX)
+            .setDuration(260)
+            .setInterpolator(DecelerateInterpolator())
+            .withEndAction {
+                outgoing.visibility = View.GONE
+                frontIsPrimary = !frontIsPrimary
+                isSwitchingTab = false
+                tvNoApplications.text = emptyMessage
+                tvNoApplications.visibility = if (isEmpty) View.VISIBLE else View.GONE
+            }
+            .start()
+    }
+
+    private fun updateTabColors(applications: Boolean) {
         tabApplications.background = getDrawable(if (applications) R.drawable.bg_tab_selected else R.drawable.bg_tab_unselected)
         tabApplications.setTextColor(getColor(if (applications) R.color.coral_800 else R.color.text_secondary))
         tabDonated.background = getDrawable(if (!applications) R.drawable.bg_tab_selected else R.drawable.bg_tab_unselected)
         tabDonated.setTextColor(getColor(if (!applications) R.color.coral_800 else R.color.text_secondary))
-
-        dateFilterRow.visibility = if (applications) android.view.View.GONE else android.view.View.VISIBLE
-
-        renderCurrentTab()
     }
+
+    /** Binds the given tab's data into [rv]. Returns (isEmpty, emptyStateMessage). */
+    private fun bindTab(rv: RecyclerView, applications: Boolean): Pair<Boolean, String> {
+        return if (applications) {
+            rv.adapter = CampApplicationAdapter(pendingApplications) { application, position ->
+                confirmMarkAsDonated(application, position)
+            }
+            pendingApplications.isEmpty() to "No pending applications."
+        } else {
+            val filtered = donatedApplications.filter { app ->
+                val time = app.donatedAt?.time ?: return@filter false
+                (fromDateMillis == null || time >= fromDateMillis!!) &&
+                        (toDateMillis == null || time <= toDateMillis!!)
+            }
+            rv.adapter = DonatedApplicationAdapter(filtered)
+            val message = if (donatedApplications.isEmpty()) "No donations recorded yet." else "No donations in this date range."
+            filtered.isEmpty() to message
+        }
+    }
+
+    private fun renderFront() {
+        val (isEmpty, emptyMessage) = bindTab(frontRv, showingApplicationsTab)
+        tvNoApplications.text = emptyMessage
+        tvNoApplications.visibility = if (isEmpty) View.VISIBLE else View.GONE
+    }
+
+    // ── Date filter ──────────────────────────────────────────────────────────
 
     private fun pickDate(isFrom: Boolean) {
         val calendar = Calendar.getInstance()
@@ -101,19 +301,20 @@ class OrgCampManageActivity : AppCompatActivity() {
                     fromDateMillis = picked.timeInMillis
                     btnFromDate.text = dateFormat.format(picked.time)
                 } else {
-                    // include the whole "to" day
                     picked.set(Calendar.HOUR_OF_DAY, 23)
                     picked.set(Calendar.MINUTE, 59)
                     toDateMillis = picked.timeInMillis
                     btnToDate.text = dateFormat.format(picked.time)
                 }
-                renderCurrentTab()
+                renderFront()
             },
             calendar.get(Calendar.YEAR),
             calendar.get(Calendar.MONTH),
             calendar.get(Calendar.DAY_OF_MONTH)
         ).show()
     }
+
+    // ── Data loading ─────────────────────────────────────────────────────────
 
     private fun loadApplications() {
         db.collection("BloodCamps").document(camp.campId)
@@ -140,40 +341,11 @@ class OrgCampManageActivity : AppCompatActivity() {
                 donatedApplications = all.filter { it.donated }
                     .sortedByDescending { it.donatedAt?.time ?: 0L }
 
-                renderCurrentTab()
+                renderFront()
             }
             .addOnFailureListener {
                 Toast.makeText(this, "Couldn't load applications", Toast.LENGTH_SHORT).show()
             }
-    }
-
-    private fun renderCurrentTab() {
-        if (showingApplicationsTab) {
-            if (pendingApplications.isEmpty()) {
-                showEmpty("No pending applications.")
-            } else {
-                showList()
-                recyclerView.adapter = CampApplicationAdapter(pendingApplications) { application, position ->
-                    confirmMarkAsDonated(application, position)
-                }
-            }
-        } else {
-            val filtered = donatedApplications.filter { app ->
-                val time = app.donatedAt?.time ?: return@filter false
-                (fromDateMillis == null || time >= fromDateMillis!!) &&
-                        (toDateMillis == null || time <= toDateMillis!!)
-            }
-
-            if (filtered.isEmpty()) {
-                showEmpty(
-                    if (donatedApplications.isEmpty()) "No donations recorded yet."
-                    else "No donations in this date range."
-                )
-            } else {
-                showList()
-                recyclerView.adapter = DonatedApplicationAdapter(filtered)
-            }
-        }
     }
 
     private fun confirmMarkAsDonated(application: CampApplication, position: Int) {
@@ -201,8 +373,6 @@ class OrgCampManageActivity : AppCompatActivity() {
             )
             .addOnSuccessListener {
 
-                // Also reflect on the donor's own donation history/stats, same as the
-                // patient-side Mark as donated flow in SendRequestActivity
                 if (application.donorId.isNotBlank()) {
                     val donationRecord = hashMapOf(
                         "date" to now,
@@ -238,16 +408,5 @@ class OrgCampManageActivity : AppCompatActivity() {
             .addOnFailureListener {
                 Toast.makeText(this, "Couldn't update. Try again.", Toast.LENGTH_SHORT).show()
             }
-    }
-
-    private fun showEmpty(message: String) {
-        recyclerView.visibility = android.view.View.GONE
-        tvNoApplications.visibility = android.view.View.VISIBLE
-        tvNoApplications.text = message
-    }
-
-    private fun showList() {
-        recyclerView.visibility = android.view.View.VISIBLE
-        tvNoApplications.visibility = android.view.View.GONE
     }
 }
