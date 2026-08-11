@@ -34,6 +34,10 @@
         <activity android:name=".ReceiveRequestActivity"/>
         <activity android:name=".OrgCampListActivity" />
         <activity android:name=".OrgCampManageActivity" />
+        <activity
+            android:name=".LocationPickerActivity"
+            android:exported="false"
+            android:theme="@style/Theme.LifeLink" />
 
 
         <activity

@@ -5,16 +5,16 @@
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:orientation="vertical"
-    android:background="#F5F5F5">
+    android:background="#F4EEE3">
 
-    <!-- Top Bar -->
+    <!-- Top header card -->
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:orientation="vertical"
         android:background="@color/white"
         android:padding="20dp"
-        android:elevation="4dp">
+        android:elevation="2dp">
 
         <TextView
             android:id="@+id/tvStepLabel"
@@ -22,38 +22,74 @@
             android:layout_height="wrap_content"
             android:text="Step 1 of 5"
             android:textSize="12sp"
-            android:textColor="@color/text_secondary"
-            android:layout_marginBottom="8dp"/>
-
-        <!-- Progress Bar -->
-        <ProgressBar
-            android:id="@+id/progressBar"
-            style="?android:attr/progressBarStyleHorizontal"
-            android:layout_width="match_parent"
-            android:layout_height="6dp"
-            android:max="5"
-            android:progress="1"
-            android:progressTint="@color/coral_600"
-            android:progressBackgroundTint="#E0E0E0"
-            android:layout_marginBottom="12dp"/>
-
-        <TextView
-            android:id="@+id/tvStepTitle"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="Basic Organization Info"
-            android:textSize="20sp"
             android:textStyle="bold"
-            android:textColor="@color/text_primary"/>
+            android:textColor="#8B3A1F"
+            android:layout_marginBottom="10dp"/>
 
-        <TextView
-            android:id="@+id/tvStepSubtitle"
-            android:layout_width="wrap_content"
+        <!-- Progress segments -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="4dp"
+            android:orientation="horizontal"
+            android:layout_marginBottom="18dp">
+
+            <View android:id="@+id/segment1" android:layout_width="0dp" android:layout_height="match_parent"
+                android:layout_weight="1" android:layout_marginEnd="6dp" android:background="#8B3A1F" />
+            <View android:id="@+id/segment2" android:layout_width="0dp" android:layout_height="match_parent"
+                android:layout_weight="1" android:layout_marginEnd="6dp" android:background="#E4D8C8" />
+            <View android:id="@+id/segment3" android:layout_width="0dp" android:layout_height="match_parent"
+                android:layout_weight="1" android:layout_marginEnd="6dp" android:background="#E4D8C8" />
+            <View android:id="@+id/segment4" android:layout_width="0dp" android:layout_height="match_parent"
+                android:layout_weight="1" android:layout_marginEnd="6dp" android:background="#E4D8C8" />
+            <View android:id="@+id/segment5" android:layout_width="0dp" android:layout_height="match_parent"
+                android:layout_weight="1" android:background="#E4D8C8" />
+        </LinearLayout>
+
+        <!-- Icon + title row -->
+        <LinearLayout
+            android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:text="Tell us about your organization"
-            android:textSize="13sp"
-            android:textColor="@color/text_secondary"
-            android:layout_marginTop="2dp"/>
+            android:orientation="horizontal"
+            android:gravity="center_vertical">
+
+            <FrameLayout
+                android:layout_width="36dp"
+                android:layout_height="36dp"
+                android:background="@drawable/bg_icon_badge">
+                <ImageView
+                    android:id="@+id/ivStepIcon"
+                    android:layout_width="18dp"
+                    android:layout_height="18dp"
+                    android:layout_gravity="center"
+                    android:src="@drawable/ic_building"
+                    app:tint="#8B3A1F" />
+            </FrameLayout>
+
+            <LinearLayout
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:orientation="vertical"
+                android:layout_marginStart="10dp">
+
+                <TextView
+                    android:id="@+id/tvStepTitle"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Basic Organization Info"
+                    android:textSize="16sp"
+                    android:textColor="#2C2C2A"/>
+
+                <TextView
+                    android:id="@+id/tvStepSubtitle"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Tell us about your organization"
+                    android:textSize="12sp"
+                    android:textColor="#5F5E5A"
+                    android:layout_marginTop="2dp"/>
+            </LinearLayout>
+        </LinearLayout>
 
     </LinearLayout>
 
@@ -64,15 +100,13 @@
         android:layout_weight="1"
         android:padding="16dp">
 
-        <!-- STEP 1: Basic Organization Info -->
         <LinearLayout
             android:id="@+id/stepContainer"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:orientation="vertical"
-            android:background="@color/white"
-            android:padding="20dp"
-            android:elevation="2dp">
+            android:background="@drawable/bg_popup"
+            android:padding="20dp">
 
             <!-- Fields injected dynamically by Kotlin -->
 
@@ -89,27 +123,39 @@
         android:padding="16dp"
         android:elevation="8dp">
 
-        <Button
+        <com.google.android.material.button.MaterialButton
             android:id="@+id/btnBack"
             android:layout_width="0dp"
             android:layout_height="48dp"
             android:layout_weight="1"
-            android:layout_marginEnd="8dp"
+            android:layout_marginEnd="10dp"
+            android:insetTop="0dp"
+            android:insetBottom="0dp"
+            android:background="@drawable/bg_ngo_card"
+            app:backgroundTint="@null"
+            android:textColor="#2C2C2A"
             android:text="Back"
-            android:textColor="@color/coral_600"
-            android:backgroundTint="@color/white"
-            android:stateListAnimator="@null"
+            app:icon="@drawable/ic_arrow_left"
+            app:iconTint="#2C2C2A"
+            app:iconGravity="textStart"
+            app:iconPadding="6dp"
             android:visibility="gone"/>
 
-        <Button
+        <com.google.android.material.button.MaterialButton
             android:id="@+id/btnNext"
             android:layout_width="0dp"
             android:layout_height="48dp"
-            android:layout_weight="1"
-            android:text="Next"
+            android:layout_weight="2"
+            android:insetTop="0dp"
+            android:insetBottom="0dp"
+            android:background="@drawable/bg_button_primary"
+            app:backgroundTint="@null"
             android:textColor="@color/white"
-            android:backgroundTint="@color/coral_600"
-            android:stateListAnimator="@null"/>
+            android:text="Next"
+            app:icon="@drawable/ic_arrow_right"
+            app:iconTint="@color/white"
+            app:iconGravity="textEnd"
+            app:iconPadding="6dp"/>
 
     </LinearLayout>
 
