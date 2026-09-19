@@ -895,6 +895,7 @@ class PatientHomeActivity : AppCompatActivity(), OnMapReadyCallback {
 
     private fun loadUpcomingCamps(userLat: Double, userLng: Double) {
         db.collection("BloodCamps")
+            .whereEqualTo("verificationStatus", "verified")
             .get()
             .addOnSuccessListener { documents ->
 

@@ -34,6 +34,8 @@
         <activity android:name=".ReceiveRequestActivity"/>
         <activity android:name=".OrgCampListActivity" />
         <activity android:name=".OrgCampManageActivity" />
+        <activity android:name=".AdminApprovalActivity"
+            android:exported="true"/>
         <activity
             android:name=".LocationPickerActivity"
             android:exported="false"

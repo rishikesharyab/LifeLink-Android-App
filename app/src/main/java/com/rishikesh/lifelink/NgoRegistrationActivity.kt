@@ -1,6 +1,8 @@
 package com.rishikesh.lifelink
 
 import android.app.Activity
+import android.app.DatePickerDialog
+import android.app.TimePickerDialog
 import android.content.Intent
 import android.net.Uri
 import android.os.Bundle
@@ -18,6 +20,9 @@ import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.firestore.SetOptions
 import com.google.firebase.storage.FirebaseStorage
+import java.text.SimpleDateFormat
+import java.util.Calendar
+import java.util.Locale
 
 class NgoRegistrationActivity : AppCompatActivity() {
 
@@ -274,9 +279,9 @@ class NgoRegistrationActivity : AppCompatActivity() {
             "facilities", "Facilities available",
             listOf("AC Hall", "Refreshments", "Medical Staff", "Ambulance", "Parking")
         )
-        addInputField("camp_start_time", "Camp Start Time (e.g. 09:00 AM) *", prefill = formData["camp_start_time"] as? String)
-        addInputField("camp_end_time", "Camp End Time (e.g. 05:00 PM) *", prefill = formData["camp_end_time"] as? String)
-        addInputField("camp_date", "Camp Date (e.g. 25 Jan 2025) *", prefill = formData["camp_date"] as? String)
+        addPickerField("camp_start_time", "Camp Start Time *", isDate = false)
+        addPickerField("camp_end_time", "Camp End Time *", isDate = false)
+        addPickerField("camp_date", "Camp Date *", isDate = true)
     }
 
     // ── Validation ────────────────────────────────────────────────────────────
@@ -433,6 +438,7 @@ class NgoRegistrationActivity : AppCompatActivity() {
             "facilities" to (formData["facilities"] ?: emptyList<String>()),
             "registeredBy" to emptyList<String>(),
             "orgId" to orgId,
+            "verificationStatus" to "pending",
             "panNumber" to (formData["pan_number"] ?: ""),
             "certificateUrl" to (certDownloadUrl ?: ""),
             "logoUrl" to (logoDownloadUrl ?: "")
@@ -685,6 +691,32 @@ class NgoRegistrationActivity : AppCompatActivity() {
         wrapper.addView(row)
         stepContainer.addView(wrapper)
         return statusText
+    }
+
+    private fun addPickerField(key: String, hint: String, isDate: Boolean) {
+        addInputField(key, hint, prefill = formData[key] as? String)
+        val et = stepContainer.findViewWithTag<EditText>("input_$key") ?: return
+        et.isFocusable = false
+        et.isClickable = true
+        et.setOnClickListener {
+            val cal = Calendar.getInstance()
+            if (isDate) {
+                DatePickerDialog(this, { _, y, m, d ->
+                    cal.set(y, m, d)
+                    et.setText(SimpleDateFormat("dd MMM yyyy", Locale.ENGLISH).format(cal.time))
+                    et.error = null
+                }, cal.get(Calendar.YEAR), cal.get(Calendar.MONTH), cal.get(Calendar.DAY_OF_MONTH)).apply {
+                    datePicker.minDate = System.currentTimeMillis() - 1000
+                }.show()
+            } else {
+                TimePickerDialog(this, { _, h, min ->
+                    cal.set(Calendar.HOUR_OF_DAY, h)
+                    cal.set(Calendar.MINUTE, min)
+                    et.setText(SimpleDateFormat("hh:mm a", Locale.ENGLISH).format(cal.time))
+                    et.error = null
+                }, cal.get(Calendar.HOUR_OF_DAY), cal.get(Calendar.MINUTE), false).show()
+            }
+        }
     }
 
     private val Int.dp: Int get() = (this * resources.displayMetrics.density).toInt()
