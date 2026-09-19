@@ -13,7 +13,8 @@ class AdminOrgAdapter(
     private val showActions: Boolean,
     private val onApprove: (NgoRegistration) -> Unit,
     private val onReject: (NgoRegistration) -> Unit,
-    private val onViewCertificate: (NgoRegistration) -> Unit
+    private val onViewCertificate: (NgoRegistration) -> Unit,
+    private val onCardClick: (NgoRegistration) -> Unit
 ) : RecyclerView.Adapter<AdminOrgAdapter.ViewHolder>() {
 
     class ViewHolder(view: View) : RecyclerView.ViewHolder(view) {
@@ -47,6 +48,7 @@ class AdminOrgAdapter(
         holder.contact.text = "${org.contactName} · ${org.phone}"
 
         holder.viewCert.setOnClickListener { onViewCertificate(org) }
+        holder.itemView.setOnClickListener { onCardClick(org) }
 
         holder.actionRow.visibility = if (showActions) View.VISIBLE else View.GONE
         holder.approveBtn.setOnClickListener { onApprove(org) }

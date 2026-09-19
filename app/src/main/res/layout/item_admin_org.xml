@@ -125,4 +125,13 @@
         android:layout_marginTop="4dp"
         android:visibility="gone" />
 
+    <TextView
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="View full details  ›"
+        android:textSize="12sp"
+        android:textColor="@color/coral_800"
+        android:gravity="center"
+        android:layout_marginTop="12dp" />
+
 </LinearLayout>

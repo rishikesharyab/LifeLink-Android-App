@@ -164,7 +164,8 @@ class AdminApprovalActivity : AppCompatActivity() {
             showActions = currentTab == "pending",
             onApprove = { org -> confirmApprove(org) },
             onReject = { org -> promptRejectReason(org) },
-            onViewCertificate = { org -> openCertificate(org) }
+            onViewCertificate = { org -> openCertificate(org) },
+            onCardClick = { org -> OrgDetailSheet.show(this, org.uid, org.orgName) }
         )
     }
 
