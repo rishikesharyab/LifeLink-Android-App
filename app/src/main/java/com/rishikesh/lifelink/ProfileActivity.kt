@@ -8,10 +8,12 @@ import android.widget.ProgressBar
 import android.widget.TextView
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
-import com.rishikesh.lifelink.util.applySystemBarInsets
 import com.google.android.material.switchmaterial.SwitchMaterial
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FirebaseFirestore
+import com.rishikesh.lifelink.util.applySystemBarInsets
+import com.google.firebase.messaging.FirebaseMessaging
+
 
 class ProfileActivity : AppCompatActivity() {
 
@@ -31,6 +33,8 @@ class ProfileActivity : AppCompatActivity() {
     private lateinit var progressBadge: ProgressBar
     private lateinit var tvAvailabilitySubtitle: TextView
     private lateinit var switchAvailability: SwitchMaterial
+
+
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -57,7 +61,9 @@ class ProfileActivity : AppCompatActivity() {
             startActivity(Intent(this, OrgCampListActivity::class.java))
         }
 
+
         findViewById<LinearLayout>(R.id.rowLogout).setOnClickListener {
+            FirebaseMessaging.getInstance().deleteToken()
             auth.signOut()
             startActivity(Intent(this, LoginActivity::class.java))
             finishAffinity()
