@@ -579,44 +579,48 @@
                             android:textSize="17sp"
                             android:textStyle="bold"
                             android:textColor="#FFFFFF"
-                            android:layout_marginBottom="12dp"/>
+                            android:maxLines="1"
+                            android:ellipsize="end"
+                            android:layout_marginBottom="10dp"/>
 
-                        <!-- Info chips row -->
+                        <!-- Location row (own row so a long address ellipsizes instead of
+                             squeezing the time/date chips below down to 0 width) -->
+                        <LinearLayout
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:orientation="horizontal"
+                            android:gravity="center_vertical"
+                            android:background="@drawable/bg_info_chip"
+                            android:paddingStart="8dp"
+                            android:paddingEnd="8dp"
+                            android:paddingTop="4dp"
+                            android:paddingBottom="4dp"
+                            android:layout_marginBottom="6dp">
+
+                            <ImageView
+                                android:layout_width="12dp"
+                                android:layout_height="12dp"
+                                android:src="@android:drawable/ic_menu_mylocation"
+                                android:layout_marginEnd="4dp"/>
+
+                            <TextView
+                                android:id="@+id/tvCampLocation"
+                                android:layout_width="0dp"
+                                android:layout_height="wrap_content"
+                                android:layout_weight="1"
+                                android:text="Andheri, Mumbai"
+                                android:textSize="11sp"
+                                android:textColor="#FFFFFF"
+                                android:maxLines="1"
+                                android:ellipsize="end"/>
+
+                        </LinearLayout>
+
+                        <!-- Time + date row -->
                         <LinearLayout
                             android:layout_width="match_parent"
                             android:layout_height="wrap_content"
                             android:orientation="horizontal">
-
-                            <!-- Location chip -->
-                            <LinearLayout
-                                android:layout_width="wrap_content"
-                                android:layout_height="wrap_content"
-                                android:orientation="horizontal"
-                                android:gravity="center_vertical"
-                                android:background="@drawable/bg_info_chip"
-                                android:paddingStart="8dp"
-                                android:paddingEnd="8dp"
-                                android:paddingTop="4dp"
-                                android:paddingBottom="4dp"
-                                android:layout_marginEnd="6dp">
-
-                                <ImageView
-                                    android:layout_width="12dp"
-                                    android:layout_height="12dp"
-                                    android:src="@android:drawable/ic_menu_mylocation"
-                                    android:layout_marginEnd="4dp"/>
-
-                                <TextView
-                                    android:id="@+id/tvCampLocation"
-                                    android:layout_width="wrap_content"
-                                    android:layout_height="wrap_content"
-                                    android:text="Andheri, Mumbai"
-                                    android:textSize="11sp"
-                                    android:textColor="#FFFFFF"
-                                    android:maxLines="1"
-                                    android:ellipsize="end"/>
-
-                            </LinearLayout>
 
                             <!-- Time chip -->
                             <LinearLayout
