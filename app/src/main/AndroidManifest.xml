@@ -26,6 +26,9 @@
             android:exported="false"/>
         <activity android:name=".DonorRegistrationActivity"
             />
+        <activity
+            android:name=".OrgVerificationStatusActivity"
+            android:exported="false" />
         <activity android:name=".ProfileActivity" />
         <activity android:name=".EditProfileActivity" />
         <activity android:name=".DonationHistoryActivity"/>

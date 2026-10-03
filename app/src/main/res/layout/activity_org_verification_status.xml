@@ -1,0 +1,217 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="#F4EEE3"
+    android:orientation="vertical">
+
+    <!-- ── TOP BAR ── -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:gravity="center_vertical"
+        android:orientation="horizontal"
+        android:padding="16dp">
+
+        <ImageView
+            android:id="@+id/ivVerificationBack"
+            android:layout_width="24dp"
+            android:layout_height="24dp"
+            android:src="@drawable/ic_arrow_back"
+            android:contentDescription="Back"
+            app:tint="@color/text_primary" />
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="12dp"
+            android:text="Verification status"
+            android:textSize="18sp"
+            android:textStyle="bold"
+            android:textColor="@color/text_primary" />
+
+    </LinearLayout>
+
+    <ScrollView
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight="1">
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:padding="20dp">
+
+            <!-- ── STATUS CARD ── -->
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:gravity="center_horizontal"
+                android:background="@drawable/bg_ngo_card"
+                android:padding="24dp"
+                android:layout_marginBottom="20dp">
+
+                <FrameLayout
+                    android:id="@+id/statusIconBadge"
+                    android:layout_width="64dp"
+                    android:layout_height="64dp"
+                    android:background="@drawable/bg_icon_badge"
+                    android:layout_marginBottom="16dp">
+
+                    <ImageView
+                        android:id="@+id/ivStatusIcon"
+                        android:layout_width="30dp"
+                        android:layout_height="30dp"
+                        android:layout_gravity="center"
+                        android:src="@drawable/ic_clock"
+                        app:tint="#8B3A1F" />
+                </FrameLayout>
+
+                <TextView
+                    android:id="@+id/tvStatusTitle"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Verification pending"
+                    android:textSize="18sp"
+                    android:textStyle="bold"
+                    android:textColor="#2C2C2A"
+                    android:gravity="center"
+                    android:layout_marginBottom="8dp" />
+
+                <TextView
+                    android:id="@+id/tvStatusDescription"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="We're reviewing your organization's details and documents. This usually takes 2–3 business days."
+                    android:textSize="13sp"
+                    android:textColor="#5F5E5A"
+                    android:gravity="center"
+                    android:lineSpacingExtra="3dp" />
+
+            </LinearLayout>
+
+            <!-- ── REJECTION REASON (visible only if rejected) ── -->
+            <LinearLayout
+                android:id="@+id/rejectionReasonBox"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:background="@drawable/bg_option_unselected"
+                android:padding="14dp"
+                android:layout_marginBottom="20dp"
+                android:visibility="gone">
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Reason for rejection"
+                    android:textSize="12sp"
+                    android:textStyle="bold"
+                    android:textColor="#8B3A1F"
+                    android:layout_marginBottom="4dp" />
+
+                <TextView
+                    android:id="@+id/tvRejectionReason"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="—"
+                    android:textSize="13sp"
+                    android:textColor="#2C2C2A" />
+
+            </LinearLayout>
+
+            <!-- ── SUBMITTED DETAILS ── -->
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:background="@drawable/bg_ngo_card"
+                android:padding="18dp"
+                android:layout_marginBottom="20dp">
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Submitted details"
+                    android:textSize="13sp"
+                    android:textStyle="bold"
+                    android:textColor="#2C2C2A"
+                    android:layout_marginBottom="12dp" />
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="horizontal"
+                    android:paddingVertical="4dp">
+                    <TextView
+                        android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1"
+                        android:text="Organization name" android:textSize="12sp" android:textColor="#5F5E5A" />
+                    <TextView
+                        android:id="@+id/tvOrgName"
+                        android:layout_width="wrap_content" android:layout_height="wrap_content"
+                        android:text="—" android:textSize="12sp" android:textColor="#2C2C2A" />
+                </LinearLayout>
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="horizontal"
+                    android:paddingVertical="4dp">
+                    <TextView
+                        android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1"
+                        android:text="Registration number" android:textSize="12sp" android:textColor="#5F5E5A" />
+                    <TextView
+                        android:id="@+id/tvRegNumber"
+                        android:layout_width="wrap_content" android:layout_height="wrap_content"
+                        android:text="—" android:textSize="12sp" android:textColor="#2C2C2A" />
+                </LinearLayout>
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="horizontal"
+                    android:paddingVertical="4dp">
+                    <TextView
+                        android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1"
+                        android:text="Submitted on" android:textSize="12sp" android:textColor="#5F5E5A" />
+                    <TextView
+                        android:id="@+id/tvSubmittedOn"
+                        android:layout_width="wrap_content" android:layout_height="wrap_content"
+                        android:text="—" android:textSize="12sp" android:textColor="#2C2C2A" />
+                </LinearLayout>
+
+            </LinearLayout>
+
+            <!-- ── PRIMARY ACTION (Resubmit / Continue to dashboard) ── -->
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/btnPrimaryAction"
+                android:layout_width="match_parent"
+                android:layout_height="52dp"
+                android:insetTop="0dp"
+                android:insetBottom="0dp"
+                android:background="@drawable/bg_button_primary"
+                app:backgroundTint="@null"
+                android:textColor="#FFFFFF"
+                android:text="Resubmit application"
+                android:layout_marginBottom="10dp"
+                android:visibility="gone" />
+
+            <TextView
+                android:id="@+id/tvContactSupport"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="Need help? Contact support"
+                android:textSize="13sp"
+                android:textColor="#8B3A1F"
+                android:textStyle="bold"
+                android:gravity="center"
+                android:padding="10dp" />
+
+        </LinearLayout>
+
+    </ScrollView>
+
+</LinearLayout>

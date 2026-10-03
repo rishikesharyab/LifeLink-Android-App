@@ -6,6 +6,7 @@ import android.widget.ImageView
 import android.widget.TextView
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
+import androidx.core.content.ContextCompat.startActivity
 import com.rishikesh.lifelink.util.applySystemBarInsets
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
@@ -33,6 +34,29 @@ class OrgCampListActivity : AppCompatActivity() {
         tvNoOrgCamps = findViewById(R.id.tvNoOrgCamps)
 
         loadCamps()
+    }
+    private fun checkVerificationThenLoad() {
+        val uid = auth.currentUser?.uid
+        if (uid == null) {
+            Toast.makeText(this, "Not signed in", Toast.LENGTH_SHORT).show()
+            finish()
+            return
+        }
+
+        db.collection("Users").document(uid).get()
+            .addOnSuccessListener { doc ->
+                val status = doc.getString("verificationStatus") ?: "pending"
+                if (status == "verified") {
+                    loadCamps()
+                } else {
+                    startActivity(Intent(this, OrgVerificationStatusActivity::class.java))
+                    finish()
+                }
+            }
+            .addOnFailureListener {
+                Toast.makeText(this, "Couldn't check verification status", Toast.LENGTH_SHORT).show()
+                finish()
+            }
     }
 
     private fun loadCamps() {
@@ -112,10 +136,28 @@ class OrgCampListActivity : AppCompatActivity() {
 
     private fun bindAdapter(camps: List<BloodCamp>, counts: Map<String, Pair<Int, Int>>) {
         recyclerView.adapter = OrgCampAdapter(camps, counts) { camp ->
-            val intent = Intent(this, OrgCampManageActivity::class.java)
-            intent.putExtra("camp", camp)
-            startActivity(intent)
+            openCamp(camp)
         }
+    }
+
+    private fun openCamp(camp: BloodCamp) {
+        val uid = auth.currentUser?.uid ?: return
+
+        db.collection("Users").document(uid).get()
+            .addOnSuccessListener { doc ->
+                val status = doc.getString("verificationStatus") ?: "pending"
+                if (status == "verified") {
+                    Toast.makeText(this, "Organization verified ✓", Toast.LENGTH_SHORT).show()
+                    val intent = Intent(this, OrgCampManageActivity::class.java)
+                    intent.putExtra("camp", camp)
+                    startActivity(intent)
+                } else {
+                    startActivity(Intent(this, OrgVerificationStatusActivity::class.java))
+                }
+            }
+            .addOnFailureListener {
+                Toast.makeText(this, "Couldn't check verification status", Toast.LENGTH_SHORT).show()
+            }
     }
 
     private fun showEmpty() {
