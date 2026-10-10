@@ -4,10 +4,10 @@
     <selectionStates>
       <SelectionState runConfigName="app">
         <option name="selectionMode" value="DROPDOWN" />
-        <DropdownSelection timestamp="2026-09-28T18:23:12.846622Z">
+        <DropdownSelection timestamp="2026-10-10T17:53:27.594817600Z">
           <Target type="DEFAULT_BOOT">
             <handle>
-              <DeviceId pluginId="Wireless" identifier="serviceName=adb-R9ZX600L59H-i4Du2l" />
+              <DeviceId pluginId="PhysicalDevice" identifier="serial=R9ZX600L59H" />
             </handle>
           </Target>
         </DropdownSelection>
@@ -37,10 +37,10 @@
       </SelectionState>
       <SelectionState runConfigName="main">
         <option name="selectionMode" value="DROPDOWN" />
-        <DropdownSelection timestamp="2026-09-19T14:17:51.133037800Z">
+        <DropdownSelection timestamp="2026-10-10T17:54:14.681456500Z">
           <Target type="DEFAULT_BOOT">
             <handle>
-              <DeviceId pluginId="Wireless" identifier="serviceName=adb-R9ZX600L59H-i4Du2l" />
+              <DeviceId pluginId="PhysicalDevice" identifier="serial=R9ZX600L59H" />
             </handle>
           </Target>
         </DropdownSelection>

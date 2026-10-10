@@ -1,5 +1,8 @@
 package com.rishikesh.lifelink
 
+import android.content.ActivityNotFoundException
+import android.content.Intent
+import android.net.Uri
 import android.os.Bundle
 import android.view.View
 import android.widget.Button
@@ -10,12 +13,6 @@ import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
 import androidx.appcompat.widget.Toolbar
 import com.rishikesh.lifelink.util.applySystemBarInsets
-import com.google.android.gms.maps.CameraUpdateFactory
-import com.google.android.gms.maps.GoogleMap
-import com.google.android.gms.maps.OnMapReadyCallback
-import com.google.android.gms.maps.SupportMapFragment
-import com.google.android.gms.maps.model.LatLng
-import com.google.android.gms.maps.model.MarkerOptions
 import com.google.android.material.chip.Chip
 import com.google.android.material.chip.ChipGroup
 import com.google.firebase.auth.FirebaseAuth
@@ -23,7 +20,7 @@ import com.google.firebase.firestore.FieldValue
 import com.google.firebase.firestore.FirebaseFirestore
 import com.rishikesh.lifelink.model.BloodCamp
 
-class CampDetailActivity : AppCompatActivity(), OnMapReadyCallback {
+class CampDetailActivity : AppCompatActivity() {
 
     private lateinit var tvCampName         : TextView
     private lateinit var tvNgoName          : TextView
@@ -36,14 +33,15 @@ class CampDetailActivity : AppCompatActivity(), OnMapReadyCallback {
     private lateinit var tvContactEmail     : TextView
     private lateinit var tvAlreadyRegistered: TextView
     private lateinit var btnConfirmRegister : Button
-    private lateinit var llMapContainer     : LinearLayout
+    private lateinit var btnOpenMaps        : TextView
+    private lateinit var llContactPhone     : LinearLayout
+    private lateinit var llContactEmail     : LinearLayout
     private lateinit var chipGroupBloodGroups: ChipGroup
     private lateinit var gridFacilities     : GridLayout
 
     private val db   = FirebaseFirestore.getInstance()
     private val auth = FirebaseAuth.getInstance()
 
-    private var googleMap: GoogleMap? = null
     private var camp: BloodCamp? = null
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -55,13 +53,14 @@ class CampDetailActivity : AppCompatActivity(), OnMapReadyCallback {
         setSupportActionBar(toolbar)
         supportActionBar?.setDisplayHomeAsUpEnabled(true)
         supportActionBar?.title = "Camp Details"
+        toolbar.setTitleTextColor(getColor(R.color.text_primary))
+        toolbar.navigationIcon?.setTint(getColor(R.color.text_primary))
         toolbar.setNavigationOnClickListener { finish() }
 
         bindViews()
 
         camp = intent.getParcelableExtra<BloodCamp>("camp") ?: run { finish(); return }
         populateUi(camp!!)
-        setupMap()
     }
 
     private fun bindViews() {
@@ -76,7 +75,9 @@ class CampDetailActivity : AppCompatActivity(), OnMapReadyCallback {
         tvContactEmail       = findViewById(R.id.tvContactEmail)
         tvAlreadyRegistered  = findViewById(R.id.tvAlreadyRegistered)
         btnConfirmRegister   = findViewById(R.id.btnConfirmRegister)
-        llMapContainer       = findViewById(R.id.llMapContainer)
+        btnOpenMaps          = findViewById(R.id.btnOpenMaps)
+        llContactPhone       = findViewById(R.id.llContactPhone)
+        llContactEmail       = findViewById(R.id.llContactEmail)
         chipGroupBloodGroups = findViewById(R.id.chipGroupBloodGroups)
         gridFacilities       = findViewById(R.id.gridFacilities)
     }
@@ -161,6 +162,24 @@ class CampDetailActivity : AppCompatActivity(), OnMapReadyCallback {
             gridFacilities.addView(tv)
         }
 
+        // ── Open in Google Maps / call / email (available to everyone) ────────
+        btnOpenMaps.setOnClickListener { openInGoogleMaps(camp) }
+
+        llContactPhone.setOnClickListener {
+            if (camp.phone.isNotBlank()) {
+                startActivity(Intent(Intent.ACTION_DIAL, Uri.parse("tel:${camp.phone}")))
+            }
+        }
+        llContactEmail.setOnClickListener {
+            if (camp.email.isNotBlank()) {
+                try {
+                    startActivity(Intent(Intent.ACTION_SENDTO, Uri.parse("mailto:${camp.email}")))
+                } catch (e: ActivityNotFoundException) {
+                    Toast.makeText(this, "No email app found", Toast.LENGTH_SHORT).show()
+                }
+            }
+        }
+
         // ── Already registered? ───────────────────────────────────────────────
         val userId = auth.currentUser?.uid ?: ""
         if (camp.registeredBy.contains(userId)) showAlreadyRegistered()
@@ -171,18 +190,12 @@ class CampDetailActivity : AppCompatActivity(), OnMapReadyCallback {
             btnConfirmRegister.isEnabled = true
             btnConfirmRegister.alpha = 1f
             btnConfirmRegister.setOnClickListener {
-                val intent = android.content.Intent(this, OrgCampManageActivity::class.java)
+                val intent = Intent(this, OrgCampManageActivity::class.java)
                 intent.putExtra("camp", camp)
                 startActivity(intent)
             }
             tvAlreadyRegistered.visibility = View.GONE
             return
-        }
-
-        // ── Location tap → show/hide map ──────────────────────────────────────
-        findViewById<LinearLayout>(R.id.tvDetailLocation).setOnClickListener {
-            llMapContainer.visibility = if (llMapContainer.visibility == View.VISIBLE)
-                View.GONE else View.VISIBLE
         }
 
         // ── Register button ───────────────────────────────────────────────────
@@ -191,27 +204,32 @@ class CampDetailActivity : AppCompatActivity(), OnMapReadyCallback {
         }
     }
 
-    // ── Map ───────────────────────────────────────────────────────────────────
+    // ── Google Maps ───────────────────────────────────────────────────────────
 
-    private fun setupMap() {
-        val mapFragment = supportFragmentManager
-            .findFragmentById(R.id.campMapFragment) as? SupportMapFragment
-        mapFragment?.getMapAsync(this)
-    }
+    private fun openInGoogleMaps(camp: BloodCamp) {
+        val hasCoords = camp.latitude != 0.0 && camp.longitude != 0.0
+        val query = if (hasCoords) "${camp.latitude},${camp.longitude}" else Uri.encode(camp.location)
 
-    override fun onMapReady(map: GoogleMap) {
-        googleMap = map
-        val c = camp ?: return
-        if (c.latitude != 0.0 && c.longitude != 0.0) {
-            val pos = LatLng(c.latitude, c.longitude)
-            map.addMarker(MarkerOptions().position(pos).title(c.campName).snippet(c.location))
-            map.moveCamera(CameraUpdateFactory.newLatLngZoom(pos, 14f))
-            map.uiSettings.isZoomControlsEnabled      = true
-            map.uiSettings.isMyLocationButtonEnabled  = true
-            if (androidx.core.content.ContextCompat.checkSelfPermission(
-                    this, android.Manifest.permission.ACCESS_FINE_LOCATION
-                ) == android.content.pm.PackageManager.PERMISSION_GRANTED
-            ) map.isMyLocationEnabled = true
+        if (!hasCoords && camp.location.isBlank()) {
+            Toast.makeText(this, "Location not available", Toast.LENGTH_SHORT).show()
+            return
+        }
+
+        val geoUri = if (hasCoords)
+            Uri.parse("geo:$query?q=$query(${Uri.encode(camp.campName)})")
+        else
+            Uri.parse("geo:0,0?q=$query")
+
+        try {
+            startActivity(Intent(Intent.ACTION_VIEW, geoUri).setPackage("com.google.android.apps.maps"))
+        } catch (e: ActivityNotFoundException) {
+            // Google Maps app not installed — fall back to the browser
+            startActivity(
+                Intent(
+                    Intent.ACTION_VIEW,
+                    Uri.parse("https://www.google.com/maps/search/?api=1&query=$query")
+                )
+            )
         }
     }
 
@@ -229,7 +247,7 @@ class CampDetailActivity : AppCompatActivity(), OnMapReadyCallback {
                     Toast.makeText(this,
                         "Please complete your donor profile first",
                         Toast.LENGTH_SHORT).show()
-                    startActivity(android.content.Intent(this, CompleteDonorProfileActivity::class.java))
+                    startActivity(Intent(this, CompleteDonorProfileActivity::class.java))
                 }
             }
             .addOnFailureListener {
