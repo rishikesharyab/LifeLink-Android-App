@@ -438,6 +438,7 @@ class NgoRegistrationActivity : AppCompatActivity() {
             "facilities" to (formData["facilities"] ?: emptyList<String>()),
             "registeredBy" to emptyList<String>(),
             "orgId" to orgId,
+            "submittedAt" to com.google.firebase.Timestamp.now(),
             "verificationStatus" to "pending",
             "panNumber" to (formData["pan_number"] ?: ""),
             "certificateUrl" to (certDownloadUrl ?: ""),
