@@ -1,5 +1,8 @@
 package com.rishikesh.lifelink
 
+import android.content.ActivityNotFoundException
+import android.content.Intent
+import android.net.Uri
 import android.os.Bundle
 import android.widget.ImageView
 import android.widget.TextView
@@ -38,7 +41,8 @@ class ReceiveRequestActivity : AppCompatActivity() {
         adapter = IncomingRequestAdapter(
             incomingRequests,
             onAccept = { request, position -> respond(request, position, BloodRequest.STATUS_ACCEPTED) },
-            onDecline = { request, position -> respond(request, position, BloodRequest.STATUS_DECLINED) }
+            onDecline = { request, position -> respond(request, position, BloodRequest.STATUS_DECLINED) },
+            onNavigate = { request -> openInMaps(request) }
         )
         recyclerView.adapter = adapter
 
@@ -55,20 +59,27 @@ class ReceiveRequestActivity : AppCompatActivity() {
 
         db.collection("BloodRequests")
             .whereEqualTo("toUserId", uid)
-            .whereEqualTo("status", BloodRequest.STATUS_PENDING)
             .get()
             .addOnSuccessListener { documents ->
 
                 incomingRequests.clear()
-                incomingRequests.addAll(documents.map { doc ->
+                incomingRequests.addAll(documents.mapNotNull { doc ->
+                    val status = doc.getString("status") ?: BloodRequest.STATUS_PENDING
+                    if (status != BloodRequest.STATUS_PENDING && status != BloodRequest.STATUS_ACCEPTED) {
+                        return@mapNotNull null
+                    }
                     BloodRequest(
                         id = doc.id,
                         fromUserId = doc.getString("fromUserId") ?: "",
                         fromUserName = doc.getString("fromUserName") ?: "A patient",
+                        fromUserPhone = doc.getString("fromUserPhone") ?: "",
+                        fromUserLocation = doc.getString("fromUserLocation") ?: "",
+                        fromUserLat = doc.getDouble("fromUserLat") ?: 0.0,
+                        fromUserLng = doc.getDouble("fromUserLng") ?: 0.0,
                         toUserId = doc.getString("toUserId") ?: "",
                         bloodGroup = doc.getString("bloodGroup") ?: "",
                         distanceKm = doc.getDouble("distanceKm") ?: 0.0,
-                        status = doc.getString("status") ?: BloodRequest.STATUS_PENDING,
+                        status = status,
                         createdAt = doc.getDate("createdAt")
                     )
                 }.sortedByDescending { it.createdAt?.time ?: 0L })
@@ -99,12 +110,16 @@ class ReceiveRequestActivity : AppCompatActivity() {
                 )
             )
             .addOnSuccessListener {
-                incomingRequests.removeAt(position)
-                adapter.notifyItemRemoved(position)
-
-                if (incomingRequests.isEmpty()) {
-                    recyclerView.visibility = android.view.View.GONE
-                    tvNoRequests.visibility = android.view.View.VISIBLE
+                if (newStatus == BloodRequest.STATUS_ACCEPTED) {
+                    incomingRequests[position] = request.copy(status = BloodRequest.STATUS_ACCEPTED)
+                    adapter.notifyItemChanged(position)
+                } else {
+                    incomingRequests.removeAt(position)
+                    adapter.notifyItemRemoved(position)
+                    if (incomingRequests.isEmpty()) {
+                        recyclerView.visibility = android.view.View.GONE
+                        tvNoRequests.visibility = android.view.View.VISIBLE
+                    }
                 }
 
                 val message = if (newStatus == BloodRequest.STATUS_ACCEPTED)
@@ -116,5 +131,33 @@ class ReceiveRequestActivity : AppCompatActivity() {
             .addOnFailureListener {
                 Toast.makeText(this, "Couldn't respond. Try again.", Toast.LENGTH_SHORT).show()
             }
+    }
+
+    private fun openInMaps(request: BloodRequest) {
+        val hasCoords = request.fromUserLat != 0.0 || request.fromUserLng != 0.0
+
+        if (!hasCoords && request.fromUserLocation.isBlank()) {
+            Toast.makeText(this, "Patient location not available", Toast.LENGTH_SHORT).show()
+            return
+        }
+
+        val query = if (hasCoords) "${request.fromUserLat},${request.fromUserLng}"
+        else Uri.encode(request.fromUserLocation)
+
+        val geoUri = if (hasCoords)
+            Uri.parse("geo:$query?q=$query(${Uri.encode(request.fromUserName)})")
+        else
+            Uri.parse("geo:0,0?q=$query")
+
+        try {
+            startActivity(Intent(Intent.ACTION_VIEW, geoUri).setPackage("com.google.android.apps.maps"))
+        } catch (e: ActivityNotFoundException) {
+            startActivity(
+                Intent(
+                    Intent.ACTION_VIEW,
+                    Uri.parse("https://www.google.com/maps/search/?api=1&query=$query")
+                )
+            )
+        }
     }
 }

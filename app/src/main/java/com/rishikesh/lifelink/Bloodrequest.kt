@@ -15,6 +15,8 @@ data class BloodRequest(
     val fromUserName: String = "",
     val fromUserPhone: String = "",
     val fromUserLocation: String = "",
+    val fromUserLat: Double = 0.0,
+    val fromUserLng: Double = 0.0,
     val toUserId: String = "",
     val toUserName: String = "",
     val toUserLocation: String = "",

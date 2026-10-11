@@ -27,6 +27,7 @@
         android:textSize="12sp" />
 
     <LinearLayout
+        android:id="@+id/actionRow"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:orientation="horizontal"
@@ -63,5 +64,20 @@
             android:paddingBottom="9dp"/>
 
     </LinearLayout>
+
+    <TextView
+        android:id="@+id/btnNavigate"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="12dp"
+        android:background="@drawable/bg_pill_filled"
+        android:text="Open in Google Maps"
+        android:textColor="#FFFFFF"
+        android:textSize="13sp"
+        android:textStyle="bold"
+        android:gravity="center"
+        android:paddingTop="9dp"
+        android:paddingBottom="9dp"
+        android:visibility="gone"/>
 
 </LinearLayout>

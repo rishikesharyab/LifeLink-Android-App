@@ -677,6 +677,8 @@ class PatientHomeActivity : AppCompatActivity(), OnMapReadyCallback {
                             "fromUserName" to fromName,
                             "fromUserPhone" to fromPhone,
                             "fromUserLocation" to fromLocation,
+                            "fromUserLat" to userLat,
+                            "fromUserLng" to userLng,
                             "toUserId" to donor.id,
                             "toUserName" to donor.name,
                             "toUserLocation" to donor.location,
