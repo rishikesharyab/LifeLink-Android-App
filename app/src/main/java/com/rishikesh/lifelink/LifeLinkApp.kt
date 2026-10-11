@@ -11,6 +11,7 @@ import android.net.Uri
 import android.os.Build
 import android.os.Bundle
 import androidx.activity.ComponentActivity
+import androidx.appcompat.app.AppCompatDelegate
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
 import com.google.firebase.auth.FirebaseAuth
@@ -23,6 +24,10 @@ class LifeLinkApp : Application() {
 
     override fun onCreate() {
         super.onCreate()
+
+        // Force light mode: the app uses a fixed cream palette, so dark mode
+        // would make status bar icons and form text invisible.
+        AppCompatDelegate.setDefaultNightMode(AppCompatDelegate.MODE_NIGHT_NO)
 
         createNotificationChannels()
 
