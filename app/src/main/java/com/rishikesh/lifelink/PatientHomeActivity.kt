@@ -857,6 +857,15 @@ class PatientHomeActivity : AppCompatActivity(), OnMapReadyCallback {
                 val isOrganization = doc.getBoolean("isOrganization") ?: false
                 findViewById<LinearLayout>(R.id.llManageCampsCard).visibility =
                     if (isOrganization) View.VISIBLE else View.GONE
+
+                // Existing orgs add camps instead of registering again
+                findViewById<TextView>(R.id.btnNgoRegister).text =
+                    if (isOrganization) "Add camp →" else "Join →"
+                findViewById<TextView>(R.id.tvNgoCardTitle).text =
+                    if (isOrganization) "Hosting another camp?" else "Are you an NGO?"
+                findViewById<TextView>(R.id.tvNgoCardSubtitle).text =
+                    if (isOrganization) "Post a new camp — your details are prefilled"
+                    else "Register your organization & post blood camps"
             }
     }
 

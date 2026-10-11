@@ -101,7 +101,8 @@ class NgoRegistrationActivity : AppCompatActivity() {
             findViewById(R.id.segment4), findViewById(R.id.segment5)
         )
 
-        renderStep(currentStep)
+        // Prefill org-level details from the org's previous camp, then draw the form
+        loadExistingOrgData { renderStep(currentStep) }
 
         btnNext.setOnClickListener {
             if (validateCurrentStep()) {
@@ -121,6 +122,41 @@ class NgoRegistrationActivity : AppCompatActivity() {
                 renderStep(currentStep)
             }
         }
+    }
+
+    // ── Prefill org details from the org's previous camp ─────────────────────
+
+    private fun loadExistingOrgData(onDone: () -> Unit) {
+        val uid = FirebaseAuth.getInstance().currentUser?.uid
+        if (uid == null) { onDone(); return }
+
+        db.collection("BloodCamps").whereEqualTo("orgId", uid).get()
+            .addOnSuccessListener { snap ->
+                val camps = snap.documents.sortedByDescending { it.getLong("endTimeMillis") ?: 0L }
+                fun pick(key: String): String? =
+                    camps.firstNotNullOfOrNull { it.getString(key)?.takeIf { v -> v.isNotBlank() } }
+
+                mapOf(
+                    "org_name" to "ngoName",
+                    "org_type" to "orgType",
+                    "reg_number" to "regNumber",
+                    "year_established" to "yearEstablished",
+                    "contact_name" to "contact_name",
+                    "designation" to "designation",
+                    "phone" to "phone",
+                    "whatsapp" to "whatsapp",
+                    "email" to "email",
+                    "website" to "website",
+                    "pan_number" to "panNumber",
+                    "ngo_darpan_id" to "ngoDarpanId",
+                    "fssai_license" to "fssaiLicense"
+                ).forEach { (formKey, dbKey) -> pick(dbKey)?.let { formData[formKey] = it } }
+
+                certDownloadUrl = pick("certificateUrl")
+                logoDownloadUrl = pick("logoUrl")
+                onDone()
+            }
+            .addOnFailureListener { onDone() }
     }
 
     // ── Render Step ───────────────────────────────────────────────────────────
@@ -457,24 +493,36 @@ class NgoRegistrationActivity : AppCompatActivity() {
             "storesBlood" to (formData["stores_blood"] ?: false)
         )
 
-        db.collection("BloodCamps")
-            .add(campData)
-            .addOnSuccessListener {
-                if (orgId.isNotBlank()) {
-                    db.collection("Users").document(orgId)
-                        .set(
-                            mapOf("isOrganization" to true, "verificationStatus" to "pending"),
-                            SetOptions.merge()
-                        )
-                }
-                Toast.makeText(this, "Camp registered — pending verification", Toast.LENGTH_LONG).show()
-                finish()
+        // Verification is per-org: keep an already-verified org verified instead of resetting it
+        val userRef = db.collection("Users").document(orgId)
+        userRef.get()
+            .addOnSuccessListener { userDoc ->
+                val alreadyVerified = userDoc.getString("verificationStatus") == "verified"
+                campData["verificationStatus"] = if (alreadyVerified) "verified" else "pending"
+
+                db.collection("BloodCamps")
+                    .add(campData)
+                    .addOnSuccessListener {
+                        val userUpdate = mutableMapOf<String, Any>("isOrganization" to true)
+                        if (!alreadyVerified) userUpdate["verificationStatus"] = "pending"
+                        userRef.set(userUpdate, SetOptions.merge())
+
+                        Toast.makeText(
+                            this,
+                            if (alreadyVerified) "Camp posted" else "Camp registered — pending verification",
+                            Toast.LENGTH_LONG
+                        ).show()
+                        finish()
+                    }
+                    .addOnFailureListener { onSubmitFailed() }
             }
-            .addOnFailureListener {
-                Toast.makeText(this, "Submission failed. Please try again.", Toast.LENGTH_SHORT).show()
-                btnNext.isEnabled = true
-                btnNext.text = "Submit"
-            }
+            .addOnFailureListener { onSubmitFailed() }
+    }
+
+    private fun onSubmitFailed() {
+        Toast.makeText(this, "Submission failed. Please try again.", Toast.LENGTH_SHORT).show()
+        btnNext.isEnabled = true
+        btnNext.text = "Submit"
     }
 
     // ── UI Builder Helpers (donor-profile visual language) ──────────────────
@@ -547,6 +595,7 @@ class NgoRegistrationActivity : AppCompatActivity() {
                 android.R.layout.simple_spinner_dropdown_item, options
             )
             tag = "spinner_$key"
+            setSelection(options.indexOf(formData[key] as? String).coerceAtLeast(0))
             background = resources.getDrawable(R.drawable.bg_input_field_active, null)
             layoutParams = LinearLayout.LayoutParams(
                 LinearLayout.LayoutParams.MATCH_PARENT, 48.dp

@@ -829,6 +829,7 @@
                     <TextView
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
+                        android:id="@+id/tvNgoCardTitle"
                         android:text="Are you an NGO?"
                         android:textSize="14sp"
                         android:textStyle="bold"
@@ -837,6 +838,7 @@
                     <TextView
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
+                        android:id="@+id/tvNgoCardSubtitle"
                         android:text="Register your organization &amp; post blood camps"
                         android:textSize="12sp"
                         android:textColor="@color/text_secondary"
