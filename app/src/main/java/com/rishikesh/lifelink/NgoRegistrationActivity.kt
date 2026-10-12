@@ -465,8 +465,7 @@ class NgoRegistrationActivity : AppCompatActivity() {
             "endTime" to (formData["camp_end_time"] ?: ""),
             "latitude" to pickedLat,
             "longitude" to pickedLng,
-            "endTimeMillis" to (System.currentTimeMillis() + 30L * 24 * 60 * 60 * 1000),
-            "contact_name" to (formData["contact_name"] ?: ""),
+            "endTimeMillis" to campEndMillis(formData["camp_date"], formData["camp_end_time"]),            "contact_name" to (formData["contact_name"] ?: ""),
             "designation" to (formData["designation"] ?: ""),
             "phone" to (formData["phone"] ?: ""),
             "email" to (formData["email"] ?: ""),
@@ -780,6 +779,11 @@ class NgoRegistrationActivity : AppCompatActivity() {
             }
         }
     }
+
+    private fun campEndMillis(date: Any?, endTime: Any?): Long = try {
+        SimpleDateFormat("dd MMM yyyy hh:mm a", Locale.ENGLISH)
+            .parse("$date $endTime")?.time ?: 0L
+    } catch (e: Exception) { 0L }
 
     private val Int.dp: Int get() = (this * resources.displayMetrics.density).toInt()
 }

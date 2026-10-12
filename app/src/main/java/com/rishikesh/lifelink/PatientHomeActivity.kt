@@ -48,6 +48,7 @@ import com.rishikesh.lifelink.model.BloodRequest
 import com.rishikesh.lifelink.util.applyDynamicStatusBar
 import java.util.Locale
 import java.util.Date
+import com.google.firebase.firestore.DocumentSnapshot
 import kotlin.math.*
 
 class PatientHomeActivity : AppCompatActivity(), OnMapReadyCallback {
@@ -923,6 +924,8 @@ class PatientHomeActivity : AppCompatActivity(), OnMapReadyCallback {
                     val distKm = results[0] / 1000.0
 
                     if (distKm > MAX_DISTANCE_KM) continue
+                    val endMillis = resolveCampEnd(doc)
+                    if (endMillis > 0 && endMillis < System.currentTimeMillis()) continue
 
                     nearbyCamps.add(
                         com.rishikesh.lifelink.model.BloodCamp(
@@ -935,8 +938,7 @@ class PatientHomeActivity : AppCompatActivity(), OnMapReadyCallback {
                             longitude         = campLng,
                             startTime         = doc.getString("startTime")         ?: "",
                             endTime           = doc.getString("endTime")           ?: "",
-                            endTimeMillis     = doc.getLong("endTimeMillis")       ?: 0L,
-                            distanceKm        = distKm,
+                            endTimeMillis     = endMillis,                            distanceKm        = distKm,
                             contactName       = doc.getString("contact_name")      ?: "",
                             designation       = doc.getString("designation")       ?: "",
                             phone             = doc.getString("phone")             ?: "",
@@ -1283,6 +1285,16 @@ class PatientHomeActivity : AppCompatActivity(), OnMapReadyCallback {
                     )
                 }
             }
+    }
+
+    private fun resolveCampEnd(doc: DocumentSnapshot): Long {
+        val date = doc.getString("date").orEmpty()
+        val end = doc.getString("endTime").orEmpty()
+        val parsed = try {
+            java.text.SimpleDateFormat("dd MMM yyyy hh:mm a", Locale.ENGLISH)
+                .parse("$date $end")?.time
+        } catch (e: Exception) { null }
+        return parsed ?: doc.getLong("endTimeMillis") ?: 0L
     }
 }
 
