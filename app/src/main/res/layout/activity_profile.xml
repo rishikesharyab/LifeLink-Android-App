@@ -572,6 +572,99 @@
                 android:textStyle="bold" />
 
         </LinearLayout>
+        <!-- ── HELP ── -->
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="HELP"
+            android:textSize="11sp"
+            android:letterSpacing="0.06"
+            android:textColor="@color/text_secondary"
+            android:textStyle="bold"
+            android:layout_marginTop="16dp"
+            android:layout_marginBottom="6dp"
+            android:layout_marginStart="4dp"/>
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:background="@drawable/bg_card_rounded"
+            android:orientation="vertical">
+
+            <LinearLayout
+                android:id="@+id/rowHelpEmail"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:gravity="center_vertical"
+                android:orientation="horizontal"
+                android:padding="14dp"
+                android:clickable="true"
+                android:focusable="true">
+
+                <ImageView
+                    android:layout_width="18dp"
+                    android:layout_height="18dp"
+                    android:src="@drawable/ic_mail"
+                    app:tint="@color/coral_800"
+                    android:layout_marginEnd="10dp"/>
+
+                <TextView
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:text="support.lifelink@gmail.com"
+                    android:textColor="@color/text_primary"
+                    android:textSize="13sp" />
+
+                <ImageView
+                    android:layout_width="14dp"
+                    android:layout_height="14dp"
+                    android:src="@drawable/ic_chevron_right"
+                    app:tint="@color/text_secondary"/>
+
+            </LinearLayout>
+
+            <View
+                android:layout_width="match_parent"
+                android:layout_height="0.5dp"
+                android:background="@color/divider"
+                android:layout_marginStart="14dp"
+                android:layout_marginEnd="14dp"/>
+
+            <LinearLayout
+                android:id="@+id/rowHelpPhone"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:gravity="center_vertical"
+                android:orientation="horizontal"
+                android:padding="14dp"
+                android:clickable="true"
+                android:focusable="true">
+
+                <ImageView
+                    android:layout_width="18dp"
+                    android:layout_height="18dp"
+                    android:src="@drawable/ic_phone"
+                    app:tint="@color/coral_800"
+                    android:layout_marginEnd="10dp"/>
+
+                <TextView
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:text="9199382389"
+                    android:textColor="@color/text_primary"
+                    android:textSize="13sp" />
+
+                <ImageView
+                    android:layout_width="14dp"
+                    android:layout_height="14dp"
+                    android:src="@drawable/ic_chevron_right"
+                    app:tint="@color/text_secondary"/>
+
+            </LinearLayout>
+
+        </LinearLayout>
 
     </LinearLayout>
 

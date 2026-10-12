@@ -1,6 +1,8 @@
 package com.rishikesh.lifelink
 
+import android.content.ActivityNotFoundException
 import android.content.Intent
+import android.net.Uri
 import android.os.Bundle
 import android.widget.ImageView
 import android.widget.LinearLayout
@@ -67,6 +69,20 @@ class ProfileActivity : AppCompatActivity() {
             auth.signOut()
             startActivity(Intent(this, LoginActivity::class.java))
             finishAffinity()
+        }
+
+        findViewById<LinearLayout>(R.id.rowHelpEmail).setOnClickListener {
+            try {
+                startActivity(
+                    Intent(Intent.ACTION_SENDTO, Uri.parse("mailto:support.lifelink@gmail.com"))
+                        .putExtra(Intent.EXTRA_SUBJECT, "LifeLink support")
+                )
+            } catch (e: ActivityNotFoundException) {
+                Toast.makeText(this, "No email app found", Toast.LENGTH_SHORT).show()
+            }
+        }
+        findViewById<LinearLayout>(R.id.rowHelpPhone).setOnClickListener {
+            startActivity(Intent(Intent.ACTION_DIAL, Uri.parse("tel:9199382389")))
         }
 
     }
