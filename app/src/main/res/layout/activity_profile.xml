@@ -547,32 +547,8 @@
 
         </LinearLayout>
 
-        <!-- ── LOG OUT ── -->
-        <LinearLayout
-            android:id="@+id/rowLogout"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:gravity="center_vertical"
-            android:orientation="horizontal"
-            android:padding="14dp">
-
-            <ImageView
-                android:layout_width="18dp"
-                android:layout_height="18dp"
-                android:src="@drawable/ic_power"
-                app:tint="@android:color/holo_red_dark"
-                android:layout_marginEnd="10dp"/>
-
-            <TextView
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:text="Log out"
-                android:textColor="@android:color/holo_red_dark"
-                android:textSize="13sp"
-                android:textStyle="bold" />
-
-        </LinearLayout>
         <!-- ── HELP ── -->
+
         <TextView
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
@@ -665,6 +641,34 @@
             </LinearLayout>
 
         </LinearLayout>
+
+        <!-- ── LOG OUT ── -->
+        <LinearLayout
+            android:id="@+id/rowLogout"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:gravity="center_vertical"
+            android:orientation="horizontal"
+            android:padding="14dp">
+
+            <ImageView
+                android:layout_width="18dp"
+                android:layout_height="18dp"
+                android:src="@drawable/ic_power"
+                app:tint="@android:color/holo_red_dark"
+                android:layout_marginEnd="10dp"/>
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Log out"
+                android:textColor="@android:color/holo_red_dark"
+                android:textSize="13sp"
+                android:textStyle="bold" />
+
+        </LinearLayout>
+        <!-- ── HELP ── -->
+
 
     </LinearLayout>
 
