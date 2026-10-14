@@ -77,6 +77,8 @@ class PatientHomeActivity : AppCompatActivity(), OnMapReadyCallback {
     var isDashboardVisible = false
     private var isDonorListVisible = false
     private var isSearchExpanded = false
+    private var tourGuide: TourGuide? = null
+    private var tourStarted = false
 
     private lateinit var etSearch: EditText
     private lateinit var ivClearSearch: ImageView
@@ -216,6 +218,10 @@ class PatientHomeActivity : AppCompatActivity(), OnMapReadyCallback {
         onBackPressedDispatcher.addCallback(this) {
 
             when {
+
+                // Tour open → back dismisses it
+                tourGuide?.isShowing == true -> tourGuide?.dismiss()
+
 
                 // If donor list is open → it's the topmost view, so close it first
                 isDonorListVisible -> {
@@ -755,6 +761,8 @@ class PatientHomeActivity : AppCompatActivity(), OnMapReadyCallback {
                 dashboardBottomSheetBehavior.state = BottomSheetBehavior.STATE_COLLAPSED
                 bottomSheetBehavior.state = BottomSheetBehavior.STATE_HIDDEN
                 isDonorListVisible = false
+
+                window.decorView.postDelayed({ maybeStartTour() }, 900)
             }
     }
 
@@ -1173,6 +1181,122 @@ class PatientHomeActivity : AppCompatActivity(), OnMapReadyCallback {
     }
 
 
+
+    // ================= APP TOUR =================
+
+    override fun onResume() {
+        super.onResume()
+        // Picks up "Replay app tour" from Profile (no-op once the tour is marked done)
+        window.decorView.postDelayed({ maybeStartTour() }, 500)
+    }
+
+    override fun onDestroy() {
+        tourGuide?.release()
+        super.onDestroy()
+    }
+
+    private fun maybeStartTour() {
+        val uid = FirebaseAuth.getInstance().currentUser?.uid ?: return
+        val prefs = getSharedPreferences("tour_prefs", MODE_PRIVATE)
+        val key = "home_tour_done_$uid"
+        if (tourStarted || prefs.getBoolean(key, false) || isFinishing) return
+        if (isSearchExpanded || isDonorListVisible ||
+            dashboardBottomSheetBehavior.state == BottomSheetBehavior.STATE_HIDDEN
+        ) return
+
+        tourStarted = true
+        val tour = TourGuide(this)
+        tourGuide = tour
+
+        fun dashStep(title: String, body: String, target: () -> View?) {
+            tour.addStep(
+                title, body,
+                onEnter = {
+                    hideTourChips()
+                    target()?.let { revealInDashboard(it) }
+                },
+                settleMs = 550,
+                target = target
+            )
+        }
+
+        tour.addStep(
+            "Find a donor fast",
+            "Search by blood group, like B+ or O negative. Results show donors near you."
+        ) { findViewById<View>(R.id.searchContainer) }
+
+        tour.addStep(
+            "Pick a blood group",
+            "Tap a chip to filter the list. You can request a donor right from the results.",
+            onEnter = {
+                bloodGroupScroll.visibility = View.VISIBLE
+                bloodGroupScroll.alpha = 1f
+            },
+            settleMs = 200
+        ) { findViewById<View>(R.id.searchContainer) }
+
+        dashStep("Your donor profile", "Tap your avatar to edit your profile, see donation history, and change settings.") {
+            tvAvatar.parent as? View
+        }
+        dashStep("Your impact", "Track donations, lives saved, and your badge as you give.") {
+            findViewById<View>(R.id.gridStats)
+        }
+        dashStep("Requests", "Sent requests shows donors you asked from the search bar. Receive request shows asks from patients.") {
+            findViewById<View>(R.id.rowRequests)
+        }
+        dashStep("Nearby blood camps", "Camps within 10 km appear here. Tap Register now to join one.") {
+            findViewById<View>(R.id.llCampSection)
+        }
+        dashStep("Join as an NGO", "Register your organization to post blood camps. Already registered? Add another camp here.") {
+            findViewById<View>(R.id.cardNgo)
+        }
+        dashStep("Available for donation", "Switch this off when you can't donate. You'll be hidden from search and requests.") {
+            findViewById<View>(R.id.rowAvailability)
+        }
+
+        tour.addStep(
+            "Become a donor",
+            "Tap Donate to complete your donor profile and start receiving requests.",
+            onEnter = {
+                hideTourChips()
+                findViewById<androidx.core.widget.NestedScrollView>(R.id.donorDashboardSheet).scrollTo(0, 0)
+                dashboardBottomSheetBehavior.state = BottomSheetBehavior.STATE_COLLAPSED
+            },
+            settleMs = 450
+        ) { findViewById<View>(R.id.navDonate) }
+
+        tour.start {
+            prefs.edit().putBoolean(key, true).apply()
+            hideTourChips()
+            findViewById<androidx.core.widget.NestedScrollView>(R.id.donorDashboardSheet).scrollTo(0, 0)
+            if (dashboardBottomSheetBehavior.state != BottomSheetBehavior.STATE_HIDDEN) {
+                dashboardBottomSheetBehavior.state = BottomSheetBehavior.STATE_COLLAPSED
+            }
+            tourGuide = null
+            tourStarted = false
+        }
+    }
+
+    private fun hideTourChips() {
+        if (!isSearchExpanded) bloodGroupScroll.visibility = View.GONE
+    }
+
+    /** Expands the dashboard sheet, then scrolls so [target] is visible. */
+    private fun revealInDashboard(target: View) {
+        val sheet = findViewById<androidx.core.widget.NestedScrollView>(R.id.donorDashboardSheet)
+        dashboardBottomSheetBehavior.state = BottomSheetBehavior.STATE_EXPANDED
+        sheet.postDelayed({
+            val content = sheet.getChildAt(0)
+            var top = 0
+            var v: View = target
+            while (v !== content) {
+                top += v.top
+                v = v.parent as? View ?: return@postDelayed
+            }
+            val margin = (24 * resources.displayMetrics.density).toInt()
+            sheet.scrollTo(0, (top - margin).coerceAtLeast(0))
+        }, 320)
+    }
 
     // ================= SEARCH COLLAPSE =================
 
