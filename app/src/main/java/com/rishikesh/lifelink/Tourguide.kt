@@ -94,10 +94,14 @@ class TourGuide(private val activity: Activity) {
         onDone = null
     }
 
-    private fun goTo(i: Int) {
+    private fun goTo(i: Int, dir: Int = 1) {
         val o = overlay ?: return
         if (i >= steps.size) {
             dismiss()
+            return
+        }
+        if (i < 0) {
+            goTo(0, 1)
             return
         }
         index = i
@@ -108,7 +112,7 @@ class TourGuide(private val activity: Activity) {
             if (overlay !== o) return@postDelayed
             val t = s.target()
             if (t == null || !t.isShown || t.width == 0 || t.height == 0) {
-                goTo(i + 1)
+                goTo(i + dir, dir)
             } else {
                 o.showStep(i, steps.size, s.title, s.body, t)
             }
@@ -133,6 +137,7 @@ class TourGuide(private val activity: Activity) {
         private val tvBody = TextView(ctx)
         private val dots = LinearLayout(ctx)
         private val btnSkip = TextView(ctx)
+        private val btnBack = TextView(ctx)
         private val btnNext = TextView(ctx)
 
         init {
@@ -171,6 +176,13 @@ class TourGuide(private val activity: Activity) {
                 setPadding(px(10), px(8), px(10), px(8))
                 setOnClickListener { dismiss() }
             }
+            btnBack.apply {
+                text = "Back"
+                textSize = 13f
+                setTextColor(0xFF8B3A1F.toInt())
+                setPadding(px(10), px(8), px(10), px(8))
+                setOnClickListener { goTo(index - 1, -1) }
+            }
             btnNext.apply {
                 textSize = 13f
                 setTypeface(typeface, Typeface.BOLD)
@@ -184,6 +196,7 @@ class TourGuide(private val activity: Activity) {
                 orientation = LinearLayout.HORIZONTAL
                 gravity = Gravity.CENTER_VERTICAL
                 addView(dots, LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f))
+                addView(btnBack)
                 addView(btnSkip)
                 addView(btnNext)
             }
@@ -225,6 +238,7 @@ class TourGuide(private val activity: Activity) {
             tvBody.text = body
             btnNext.text = if (i == total - 1) "Got it" else "Next"
             btnSkip.visibility = if (i == total - 1) View.GONE else View.VISIBLE
+            btnBack.visibility = if (i == 0) View.GONE else View.VISIBLE
 
             dots.removeAllViews()
             for (k in 0 until total) {

@@ -1222,12 +1222,12 @@ class PatientHomeActivity : AppCompatActivity(), OnMapReadyCallback {
 
         tour.addStep(
             "Find a donor fast",
-            "Search by blood group, like B+ or O negative. Results show donors near you."
+            "Search by blood group, such as B+ or O-. Results show donors near you."
         ) { findViewById<View>(R.id.searchContainer) }
 
         tour.addStep(
             "Pick a blood group",
-            "Tap a chip to filter the list. You can request a donor right from the results.",
+            "Tap a chip to filter the results. You can request a donor directly from the list.",
             onEnter = {
                 bloodGroupScroll.visibility = View.VISIBLE
                 bloodGroupScroll.alpha = 1f
@@ -1238,19 +1238,19 @@ class PatientHomeActivity : AppCompatActivity(), OnMapReadyCallback {
         dashStep("Your donor profile", "Tap your avatar to edit your profile, see donation history, and change settings.") {
             tvAvatar.parent as? View
         }
-        dashStep("Your impact", "Track donations, lives saved, and your badge as you give.") {
+        dashStep("Your impact", "Track your donations, lives saved, and badge as you give.") {
             findViewById<View>(R.id.gridStats)
         }
-        dashStep("Requests", "Sent requests shows donors you asked from the search bar. Receive request shows asks from patients.") {
+        dashStep("Requests", "Sent requests shows the donors you contacted via the search bar, while Received requests shows requests from patients.") {
             findViewById<View>(R.id.rowRequests)
         }
-        dashStep("Nearby blood camps", "Camps within 10 km appear here. Tap Register now to join one.") {
+        dashStep("Nearby blood camps", "Camps within 10 km appear here. Tap \"Register now\" to join one.") {
             findViewById<View>(R.id.llCampSection)
         }
         dashStep("Join as an NGO", "Register your organization to post blood camps. Already registered? Add another camp here.") {
             findViewById<View>(R.id.cardNgo)
         }
-        dashStep("Available for donation", "Switch this off when you can't donate. You'll be hidden from search and requests.") {
+        dashStep("Available for donation", "Switch this off when you can't donate. You'll be hidden from search results and requests.") {
             findViewById<View>(R.id.rowAvailability)
         }
 
