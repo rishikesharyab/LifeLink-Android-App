@@ -2,9 +2,12 @@ package com.rishikesh.lifelink
 
 import android.content.Intent
 import android.os.Bundle
+import android.text.InputType
 import android.util.Log
+import android.util.Patterns
 import android.widget.Button
 import android.widget.EditText
+import android.widget.FrameLayout
 import android.widget.TextView
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
@@ -70,6 +73,61 @@ class LoginActivity : AppCompatActivity() {
         signupText.setOnClickListener {
             startActivity(Intent(this, SignupActivity::class.java))
         }
+
+        findViewById<TextView>(R.id.tvForgotPassword).setOnClickListener {
+            showResetPasswordDialog()
+        }
+    }
+
+    // ── Reset password ────────────────────────────────────────────────────────
+
+    private fun showResetPasswordDialog() {
+        val input = EditText(this).apply {
+            hint = "Email"
+            inputType = InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_VARIATION_EMAIL_ADDRESS
+            setText(emailEt.text.toString().trim())
+            setSelection(text.length)
+        }
+        val pad = (20 * resources.displayMetrics.density).toInt()
+        val container = FrameLayout(this).apply {
+            setPadding(pad, pad / 2, pad, 0)
+            addView(input)
+        }
+
+        val dialog = AlertDialog.Builder(this)
+            .setTitle("Reset password")
+            .setMessage("Enter your email and we'll send you a link to reset your password.")
+            .setView(container)
+            .setPositiveButton("Send link", null)   // overridden below so the dialog stays open on errors
+            .setNegativeButton("Cancel") { d, _ -> d.dismiss() }
+            .create()
+
+        dialog.setOnShowListener {
+            dialog.getButton(AlertDialog.BUTTON_POSITIVE).setOnClickListener {
+                val email = input.text.toString().trim()
+                if (!Patterns.EMAIL_ADDRESS.matcher(email).matches()) {
+                    input.error = "Enter a valid email address"
+                    return@setOnClickListener
+                }
+                sendResetLink(email, dialog)
+            }
+        }
+        dialog.show()
+    }
+
+    private fun sendResetLink(email: String, dialog: AlertDialog) {
+        auth.sendPasswordResetEmail(email)
+            .addOnSuccessListener {
+                dialog.dismiss()
+                Toast.makeText(
+                    this,
+                    "If an account exists for $email, a reset link has been sent. Check your spam folder too.",
+                    Toast.LENGTH_LONG
+                ).show()
+            }
+            .addOnFailureListener {
+                Toast.makeText(this, "Couldn't send reset email. Try again later.", Toast.LENGTH_SHORT).show()
+            }
     }
 
     // Used for BOTH auto-login and manual login.
