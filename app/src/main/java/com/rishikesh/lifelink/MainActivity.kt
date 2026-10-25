@@ -23,6 +23,16 @@ class MainActivity : AppCompatActivity() {
             return
         }
 
+        // New accounts must verify their email before using the app
+        if (!EmailGate.isAllowed(user)) {
+            startActivity(
+                Intent(this, VerifyEmailActivity::class.java)
+                    .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK)
+            )
+            finish()
+            return
+        }
+
         FirebaseFirestore.getInstance()
             .collection("Users")
             .document(user.uid)

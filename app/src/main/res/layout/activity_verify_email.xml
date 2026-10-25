@@ -1,0 +1,92 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="#F4EEE3"
+    android:gravity="center"
+    android:orientation="vertical"
+    android:padding="28dp">
+
+    <FrameLayout
+        android:layout_width="64dp"
+        android:layout_height="64dp"
+        android:layout_marginBottom="20dp"
+        android:background="@drawable/bg_icon_badge">
+        <ImageView
+            android:layout_width="30dp"
+            android:layout_height="30dp"
+            android:layout_gravity="center"
+            android:src="@drawable/ic_mail"
+            app:tint="#8B3A1F" />
+    </FrameLayout>
+
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Verify your email"
+        android:fontFamily="serif"
+        android:textStyle="bold"
+        android:textSize="24sp"
+        android:textColor="#2B1B14" />
+
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="10dp"
+        android:text="We sent a verification link to"
+        android:textSize="13sp"
+        android:textColor="#8A776C" />
+
+    <TextView
+        android:id="@+id/tvVerifyEmailAddress"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="2dp"
+        android:text="—"
+        android:textSize="14sp"
+        android:textStyle="bold"
+        android:textColor="#2C2C2A" />
+
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="12dp"
+        android:layout_marginBottom="28dp"
+        android:gravity="center"
+        android:text="Open the link in that email, then come back and tap the button below. Check your spam folder if you don't see it."
+        android:textSize="12sp"
+        android:textColor="#5F5E5A" />
+
+    <com.google.android.material.button.MaterialButton
+        android:id="@+id/btnVerified"
+        android:layout_width="match_parent"
+        android:layout_height="52dp"
+        android:insetTop="0dp"
+        android:insetBottom="0dp"
+        android:background="@drawable/bg_button_primary"
+        app:backgroundTint="@null"
+        android:textColor="#FFFFFF"
+        android:text="I've verified" />
+
+    <TextView
+        android:id="@+id/tvResend"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="16dp"
+        android:padding="8dp"
+        android:text="Resend email"
+        android:textSize="13sp"
+        android:textStyle="bold"
+        android:textColor="#8B3A1F" />
+
+    <TextView
+        android:id="@+id/tvUseAnotherAccount"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:padding="8dp"
+        android:text="Use a different account"
+        android:textSize="12sp"
+        android:textColor="#5F5E5A" />
+
+</LinearLayout>

@@ -1,5 +1,6 @@
 package com.rishikesh.lifelink
 
+import android.content.Intent
 import android.os.Bundle
 import android.widget.ImageView
 import android.widget.TextView
@@ -22,6 +23,15 @@ class PrivacyActivity : AppCompatActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        val currentUser = FirebaseAuth.getInstance().currentUser
+        if (currentUser != null && !EmailGate.isAllowed(currentUser)) {
+            startActivity(
+                Intent(this, VerifyEmailActivity::class.java)
+                    .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK)
+            )
+            finish()
+            return
+        }
         setContentView(R.layout.activity_privacy)
         applySystemBarInsets()
 

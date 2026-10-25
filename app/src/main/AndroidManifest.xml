@@ -38,6 +38,8 @@
         <activity android:name=".ReceiveRequestActivity"/>
         <activity android:name=".OrgCampListActivity" />
         <activity android:name=".OrgCampManageActivity" />
+        <activity android:name=".VerifyEmailActivity"
+            android:exported="false" />
         <activity android:name=".AdminApprovalActivity"
             android:exported="true"/>
         <activity

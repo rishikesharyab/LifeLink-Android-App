@@ -9,6 +9,7 @@ import android.widget.TextView
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
 import com.google.firebase.auth.FirebaseAuth
+import com.google.firebase.auth.FirebaseUser
 import com.google.firebase.firestore.FirebaseFirestore
 import androidx.appcompat.app.AlertDialog
 import androidx.core.view.ViewCompat
@@ -32,8 +33,7 @@ class LoginActivity : AppCompatActivity() {
         val user = FirebaseAuth.getInstance().currentUser
 
         if (user != null) {
-            startActivity(Intent(this, PatientHomeActivity::class.java))
-            finish()
+            routeAfterLogin(user)
             return
         }
 
@@ -47,6 +47,9 @@ class LoginActivity : AppCompatActivity() {
         passwordEt = findViewById(R.id.passwordEt)
         loginBtn = findViewById(R.id.loginBtn)
         signupText = findViewById(R.id.signupText)
+
+        // Show / hide password
+        passwordEt.attachPasswordToggle(findViewById(R.id.ivTogglePassword))
 
         // Handle system bar insets to avoid overlap
         ViewCompat.setOnApplyWindowInsetsListener(findViewById(android.R.id.content)) { v, insets ->
@@ -69,8 +72,18 @@ class LoginActivity : AppCompatActivity() {
         }
     }
 
+    // Used for BOTH auto-login and manual login.
+    // Verified (or grandfathered) users go Home; everyone else goes to the verify screen.
+    private fun routeAfterLogin(user: FirebaseUser) {
+        val target = if (EmailGate.isAllowed(user)) PatientHomeActivity::class.java
+        else VerifyEmailActivity::class.java
 
-    // 🔁 Used for BOTH auto-login and manual login
+        startActivity(
+            Intent(this, target)
+                .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK)
+        )
+        finish()
+    }
 
     private fun showRoleChooserDialog() {
 
@@ -139,9 +152,12 @@ class LoginActivity : AppCompatActivity() {
         }
 
         auth.signInWithEmailAndPassword(email, pass)
-            .addOnSuccessListener {
-                Toast.makeText(this, "Login Successful!", Toast.LENGTH_SHORT).show()
-                startActivity(Intent(this, PatientHomeActivity::class.java))
+            .addOnSuccessListener { result ->
+                val signedIn = result.user ?: return@addOnSuccessListener
+                if (EmailGate.isAllowed(signedIn)) {
+                    Toast.makeText(this, "Login Successful!", Toast.LENGTH_SHORT).show()
+                }
+                routeAfterLogin(signedIn)
             }
             .addOnFailureListener {
                 Toast.makeText(
