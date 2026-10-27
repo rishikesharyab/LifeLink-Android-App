@@ -550,6 +550,16 @@ class PatientHomeActivity : AppCompatActivity(), OnMapReadyCallback {
                     val isAvailable = doc.getBoolean("available") ?: true
                     if (!isAvailable) continue // skip donors who turned availability off
 
+                    // Hide donors who donated within the last 3 months; they reappear automatically after that
+                    val lastDonation = doc.getDate("lastDonationDate")
+                    if (lastDonation != null) {
+                        val eligibleOn = java.util.Calendar.getInstance().apply {
+                            time = lastDonation
+                            add(java.util.Calendar.MONTH, DONATION_INTERVAL_MONTHS)
+                        }.time
+                        if (eligibleOn.after(Date())) continue
+                    }
+
                     val lat = doc.getDouble("latitude") ?: continue
                     val lng = doc.getDouble("longitude") ?: continue
 
@@ -836,12 +846,12 @@ class PatientHomeActivity : AppCompatActivity(), OnMapReadyCallback {
 
         if (donor.lastDonationDate != null) {
             tvLastDonation.text = format.format(donor.lastDonationDate)
-            tvNextEligible.text = format.format(
-                java.util.Calendar.getInstance().apply {
-                    time = donor.lastDonationDate
-                    add(java.util.Calendar.MONTH, DONATION_INTERVAL_MONTHS)
-                }.time
-            )
+            val nextEligible = java.util.Calendar.getInstance().apply {
+                time = donor.lastDonationDate
+                add(java.util.Calendar.MONTH, DONATION_INTERVAL_MONTHS)
+            }.time
+            tvNextEligible.text = format.format(nextEligible)
+            DonationReminderReceiver.schedule(this, nextEligible.time)
         } else {
             tvLastDonation.text = "—"
             tvNextEligible.text = "Now"

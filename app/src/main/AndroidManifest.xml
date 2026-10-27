@@ -38,6 +38,9 @@
         <activity android:name=".ReceiveRequestActivity"/>
         <activity android:name=".OrgCampListActivity" />
         <activity android:name=".OrgCampManageActivity" />
+
+        <receiver android:name=".DonationReminderReceiver"
+            android:exported="false" />
         <activity android:name=".VerifyEmailActivity"
             android:exported="false" />
         <activity android:name=".AdminApprovalActivity"
