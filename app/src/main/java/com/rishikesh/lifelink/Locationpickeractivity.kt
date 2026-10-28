@@ -190,7 +190,7 @@ class LocationPickerActivity : AppCompatActivity(), OnMapReadyCallback {
     private fun centerOnCurrentLocation(animate: Boolean, zoom: Float) {
         if (!hasLocationPermission()) {
             ActivityCompat.requestPermissions(
-                this, arrayOf(Manifest.permission.ACCESS_FINE_LOCATION), LOCATION_PERMISSION_REQUEST
+                this, arrayOf(Manifest.permission.ACCESS_FINE_LOCATION, Manifest.permission.ACCESS_COARSE_LOCATION), LOCATION_PERMISSION_REQUEST
             )
             return
         }
@@ -317,6 +317,8 @@ class LocationPickerActivity : AppCompatActivity(), OnMapReadyCallback {
 
     private fun hasLocationPermission(): Boolean =
         ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) ==
+                PackageManager.PERMISSION_GRANTED ||
+                ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_COARSE_LOCATION) ==
                 PackageManager.PERMISSION_GRANTED
 
     override fun onRequestPermissionsResult(
@@ -324,7 +326,7 @@ class LocationPickerActivity : AppCompatActivity(), OnMapReadyCallback {
     ) {
         super.onRequestPermissionsResult(requestCode, permissions, grantResults)
         if (requestCode == LOCATION_PERMISSION_REQUEST &&
-            grantResults.isNotEmpty() && grantResults[0] == PackageManager.PERMISSION_GRANTED
+            grantResults.any { it == PackageManager.PERMISSION_GRANTED }
         ) {
             centerOnCurrentLocation(animate = true, zoom = DEFAULT_ZOOM)
         }

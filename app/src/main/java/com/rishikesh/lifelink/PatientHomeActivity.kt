@@ -473,11 +473,7 @@ class PatientHomeActivity : AppCompatActivity(), OnMapReadyCallback {
 //        enablePatientLocation()
 
 
-        if (ContextCompat.checkSelfPermission(
-                this,
-                Manifest.permission.ACCESS_FINE_LOCATION
-            ) == PackageManager.PERMISSION_GRANTED
-        ) {
+        if (hasLocationPermission()) {
             googleMap.isMyLocationEnabled = true
         }
 
@@ -1080,15 +1076,11 @@ class PatientHomeActivity : AppCompatActivity(), OnMapReadyCallback {
 
         }, 500)
 
-        if (ContextCompat.checkSelfPermission(
-                this,
-                Manifest.permission.ACCESS_FINE_LOCATION
-            ) != PackageManager.PERMISSION_GRANTED
-        ) {
+        if (!hasLocationPermission()) {
             ActivityCompat.requestPermissions(
                 this,
-                arrayOf(Manifest.permission.ACCESS_FINE_LOCATION),
-                1001
+                arrayOf(Manifest.permission.ACCESS_FINE_LOCATION, Manifest.permission.ACCESS_COARSE_LOCATION),
+                LOCATION_PERMISSION_CODE
             )
             return
         }
@@ -1129,6 +1121,12 @@ class PatientHomeActivity : AppCompatActivity(), OnMapReadyCallback {
         }
     }
 
+
+    private fun hasLocationPermission(): Boolean =
+        ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) ==
+                PackageManager.PERMISSION_GRANTED ||
+                ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_COARSE_LOCATION) ==
+                PackageManager.PERMISSION_GRANTED
 
     private fun getAddressFromLatLng(lat: Double, lng: Double) {
 
@@ -1173,9 +1171,9 @@ class PatientHomeActivity : AppCompatActivity(), OnMapReadyCallback {
 
 
 
-        if (requestCode == 1001) {
+        if (requestCode == LOCATION_PERMISSION_CODE) {
 
-            if (grantResults.isNotEmpty() && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
+            if (grantResults.any { it == PackageManager.PERMISSION_GRANTED }) {
 
                 Log.d("LOCATION_DEBUG", "Permission Granted by user")
 
