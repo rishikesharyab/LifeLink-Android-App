@@ -55,13 +55,19 @@ object OrgDetailSheet {
             .get()
             .addOnSuccessListener { snap ->
                 val camps = snap.documents.sortedByDescending { it.getLong("endTimeMillis") ?: 0L }
-                when {
-                    camps.isEmpty() -> ui.showMessage("No registration details found.")
-                    camps.size == 1 -> ui.showDetail(camps[0], canGoBack = false)
-                    else -> { ui.camps = camps; ui.showList() }
-                }
+                FirebaseFirestore.getInstance().collection("OrgVerification").document(orgUid).get()
+                    .addOnSuccessListener { ui.verification = it; render(ui, camps) }
+                    .addOnFailureListener { render(ui, camps) }
             }
             .addOnFailureListener { ui.showMessage("Couldn't load details: ${it.message}") }
+    }
+
+    private fun render(ui: Ui, camps: List<DocumentSnapshot>) {
+        when {
+            camps.isEmpty() -> ui.showMessage("No registration details found.")
+            camps.size == 1 -> ui.showDetail(camps[0], canGoBack = false)
+            else -> { ui.camps = camps; ui.showList() }
+        }
     }
 
     private class Ui(
@@ -72,6 +78,7 @@ object OrgDetailSheet {
         val density: Float
     ) {
         var camps: List<DocumentSnapshot> = emptyList()
+        var verification: DocumentSnapshot? = null
 
         fun px(v: Int) = (v * density).toInt()
 
@@ -172,7 +179,7 @@ object OrgDetailSheet {
 
             section("Organization")
             row("Type", d.getString("orgType"))
-            row("Registration no.", d.getString("regNumber"))
+            row("Registration no.", verification?.getString("regNumber"))
             row("Year established", d.getString("yearEstablished"))
 
             section("Camp")
@@ -198,11 +205,11 @@ object OrgDetailSheet {
             row("Website", d.getString("website"))
 
             section("Verification")
-            row("PAN", d.getString("panNumber"))
-            row("NGO Darpan ID", d.getString("ngoDarpanId"))
-            row("FSSAI / licence", d.getString("fssaiLicense"))
+            row("PAN", verification?.getString("panNumber"))
+            row("NGO Darpan ID", verification?.getString("ngoDarpanId"))
+            row("FSSAI / licence", verification?.getString("fssaiLicense"))
 
-            link("📎 View registration certificate", d.getString("certificateUrl"))
+            link("📎 View registration certificate", verification?.getString("certificateUrl"))
             link("🖼️ View logo", d.getString("logoUrl"))
         }
 

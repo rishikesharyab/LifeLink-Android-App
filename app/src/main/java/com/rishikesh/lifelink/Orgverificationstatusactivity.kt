@@ -89,6 +89,16 @@ class OrgVerificationStatusActivity : AppCompatActivity() {
 
     // Submitted details: read from the org's original BloodCamps doc
     private fun loadDetails(uid: String, userDoc: DocumentSnapshot) {
+        // Registration number now lives in OrgVerification/{uid}
+        db.collection("OrgVerification").document(uid).get()
+            .addOnSuccessListener { v ->
+                tvRegNumber.text = v.getString("regNumber")?.takeIf { it.isNotBlank() }
+                    ?: userDoc.getString("reg_number")?.takeIf { it.isNotBlank() } ?: "—"
+            }
+            .addOnFailureListener {
+                tvRegNumber.text = userDoc.getString("reg_number")?.takeIf { it.isNotBlank() } ?: "—"
+            }
+
         db.collection("BloodCamps").whereEqualTo("orgId", uid).get()
             .addOnSuccessListener { snap ->
                 // Newest camp first
@@ -104,9 +114,6 @@ class OrgVerificationStatusActivity : AppCompatActivity() {
 
                 tvCampName.text = pick("campName") ?: "—"
 
-                tvRegNumber.text = pick("regNumber", "reg_number")
-                    ?: userDoc.getString("reg_number")?.takeIf { it.isNotBlank() } ?: "—"
-
                 val newest = camps.firstOrNull()
                 val legacy = newest?.getLong("endTimeMillis")
                     ?.takeIf { it > 0 }
@@ -118,7 +125,6 @@ class OrgVerificationStatusActivity : AppCompatActivity() {
             .addOnFailureListener {
                 tvOrgName.text = userDoc.getString("org_name") ?: "—"
                 tvCampName.text = "—"
-                tvRegNumber.text = userDoc.getString("reg_number") ?: "—"
                 tvSubmittedOn.text = userDoc.getDate("submittedAt")?.let { dateFormat.format(it) } ?: "—"
             }
     }

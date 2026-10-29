@@ -139,7 +139,6 @@ class NgoRegistrationActivity : AppCompatActivity() {
                 mapOf(
                     "org_name" to "ngoName",
                     "org_type" to "orgType",
-                    "reg_number" to "regNumber",
                     "year_established" to "yearEstablished",
                     "contact_name" to "contact_name",
                     "designation" to "designation",
@@ -147,13 +146,27 @@ class NgoRegistrationActivity : AppCompatActivity() {
                     "whatsapp" to "whatsapp",
                     "email" to "email",
                     "website" to "website",
+                ).forEach { (formKey, dbKey) -> pick(dbKey)?.let { formData[formKey] = it } }
+
+                logoDownloadUrl = pick("logoUrl")
+                loadVerification(uid, onDone)
+            }
+            .addOnFailureListener { loadVerification(uid, onDone) }
+    }
+
+    // Private verification fields live in OrgVerification/{orgId}, not on camp docs
+    private fun loadVerification(uid: String, onDone: () -> Unit) {
+        db.collection("OrgVerification").document(uid).get()
+            .addOnSuccessListener { doc ->
+                mapOf(
+                    "reg_number" to "regNumber",
                     "pan_number" to "panNumber",
                     "ngo_darpan_id" to "ngoDarpanId",
                     "fssai_license" to "fssaiLicense"
-                ).forEach { (formKey, dbKey) -> pick(dbKey)?.let { formData[formKey] = it } }
-
-                certDownloadUrl = pick("certificateUrl")
-                logoDownloadUrl = pick("logoUrl")
+                ).forEach { (formKey, dbKey) ->
+                    doc.getString(dbKey)?.takeIf { it.isNotBlank() }?.let { formData[formKey] = it }
+                }
+                certDownloadUrl = doc.getString("certificateUrl")?.takeIf { it.isNotBlank() }
                 onDone()
             }
             .addOnFailureListener { onDone() }
@@ -475,26 +488,32 @@ class NgoRegistrationActivity : AppCompatActivity() {
             "orgId" to orgId,
             "submittedAt" to com.google.firebase.Timestamp.now(),
             "verificationStatus" to "pending",
-            "panNumber" to (formData["pan_number"] ?: ""),
-            "certificateUrl" to (certDownloadUrl ?: ""),
             "logoUrl" to (logoDownloadUrl ?: ""),
             "orgType" to (formData["org_type"] ?: ""),
-            "regNumber" to (formData["reg_number"] ?: ""),
             "yearEstablished" to (formData["year_established"] ?: ""),
             "city" to (formData["city"] ?: ""),
             "state" to (formData["state"] ?: ""),
             "pincode" to (formData["pincode"] ?: ""),
             "whatsapp" to (formData["whatsapp"] ?: ""),
             "website" to (formData["website"] ?: ""),
-            "ngoDarpanId" to (formData["ngo_darpan_id"] ?: ""),
-            "fssaiLicense" to (formData["fssai_license"] ?: ""),
             "conductsCamps" to (formData["conducts_camps"] ?: false),
             "storesBlood" to (formData["stores_blood"] ?: false)
         )
 
         // Verification is per-org: keep an already-verified org verified instead of resetting it
         val userRef = db.collection("Users").document(orgId)
-        userRef.get()
+        val verification = hashMapOf<String, Any>(
+            "orgId" to orgId,
+            "panNumber" to (formData["pan_number"] ?: ""),
+            "certificateUrl" to (certDownloadUrl ?: ""),
+            "regNumber" to (formData["reg_number"] ?: ""),
+            "ngoDarpanId" to (formData["ngo_darpan_id"] ?: ""),
+            "fssaiLicense" to (formData["fssai_license"] ?: ""),
+            "updatedAt" to com.google.firebase.Timestamp.now()
+        )
+        db.collection("OrgVerification").document(orgId)
+            .set(verification, SetOptions.merge())
+            .onSuccessTask { userRef.get() }
             .addOnSuccessListener { userDoc ->
                 val alreadyVerified = userDoc.getString("verificationStatus") == "verified"
                 campData["verificationStatus"] = if (alreadyVerified) "verified" else "pending"

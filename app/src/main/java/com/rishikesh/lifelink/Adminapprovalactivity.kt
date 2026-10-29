@@ -12,6 +12,7 @@ import androidx.appcompat.app.AppCompatActivity
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import com.google.firebase.auth.FirebaseAuth
+import com.google.firebase.firestore.DocumentSnapshot
 import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.firestore.SetOptions
 import com.rishikesh.lifelink.model.NgoRegistration
@@ -113,43 +114,45 @@ class AdminApprovalActivity : AppCompatActivity() {
                     val orgId = userDoc.id
                     val rejectionReason = userDoc.getString("rejectionReason") ?: ""
 
+                    fun done() {
+                        remaining--
+                        if (remaining == 0) {
+                            orgs = results
+                            if (orgs.isEmpty()) showEmpty() else showList()
+                        }
+                    }
+
+                    fun add(camp: DocumentSnapshot?, verif: DocumentSnapshot?) {
+                        results.add(
+                            NgoRegistration(
+                                id = orgId,
+                                uid = orgId,
+                                orgName = camp?.getString("ngoName") ?: "Untitled organization",
+                                orgType = "",
+                                contactName = camp?.getString("contact_name") ?: "",
+                                phone = camp?.getString("phone") ?: "",
+                                email = camp?.getString("email") ?: "",
+                                panNumber = verif?.getString("panNumber") ?: "",
+                                ngoDarpanId = verif?.getString("ngoDarpanId") ?: "",
+                                certificateUrl = verif?.getString("certificateUrl") ?: "",
+                                verificationStatus = status,
+                                rejectionReason = rejectionReason
+                            )
+                        )
+                        done()
+                    }
+
                     db.collection("BloodCamps")
                         .whereEqualTo("orgId", orgId)
                         .limit(1)
                         .get()
                         .addOnSuccessListener { campDocs ->
                             val camp = campDocs.documents.firstOrNull()
-
-                            results.add(
-                                NgoRegistration(
-                                    id = orgId,
-                                    uid = orgId,
-                                    orgName = camp?.getString("ngoName") ?: "Untitled organization",
-                                    orgType = "",
-                                    contactName = camp?.getString("contact_name") ?: "",
-                                    phone = camp?.getString("phone") ?: "",
-                                    email = camp?.getString("email") ?: "",
-                                    panNumber = camp?.getString("panNumber") ?: "",
-                                    ngoDarpanId = "",
-                                    certificateUrl = camp?.getString("certificateUrl") ?: "",
-                                    verificationStatus = status,
-                                    rejectionReason = rejectionReason
-                                )
-                            )
-
-                            remaining--
-                            if (remaining == 0) {
-                                orgs = results
-                                if (orgs.isEmpty()) showEmpty() else showList()
-                            }
+                            db.collection("OrgVerification").document(orgId).get()
+                                .addOnSuccessListener { add(camp, it) }
+                                .addOnFailureListener { add(camp, null) }
                         }
-                        .addOnFailureListener {
-                            remaining--
-                            if (remaining == 0) {
-                                orgs = results
-                                if (orgs.isEmpty()) showEmpty() else showList()
-                            }
-                        }
+                        .addOnFailureListener { done() }
                 }
             }
             .addOnFailureListener {
