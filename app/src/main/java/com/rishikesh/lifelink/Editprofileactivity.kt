@@ -129,6 +129,7 @@ class EditProfileActivity : AppCompatActivity() {
             .document(user.uid)
             .update(updates)
             .addOnSuccessListener {
+                DonorDirectory.sync(user.uid)
                 Toast.makeText(this, "Profile updated", Toast.LENGTH_SHORT).show()
                 finish()
             }

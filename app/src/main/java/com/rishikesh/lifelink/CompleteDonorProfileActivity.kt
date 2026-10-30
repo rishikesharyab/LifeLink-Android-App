@@ -409,6 +409,7 @@ class CompleteDonorProfileActivity : AppCompatActivity() {
                 .document(uid)
                 .set(data, SetOptions.merge())
                 .addOnSuccessListener {
+                    DonorDirectory.sync(uid)
                     toast("Profile completed successfully")
                     finish()
                 }

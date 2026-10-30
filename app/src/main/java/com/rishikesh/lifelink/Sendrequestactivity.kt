@@ -35,7 +35,6 @@ class SendRequestActivity : AppCompatActivity() {
 
     private var sentRequests: List<BloodRequest> = emptyList()
     private var acceptedRequests: List<BloodRequest> = emptyList()
-    private var acceptedDonorPhones: Map<String, String> = emptyMap()
     private var showingSentTab = true
 
     // Which physical RecyclerView is currently the visible ("front") one.
@@ -256,13 +255,11 @@ class SendRequestActivity : AppCompatActivity() {
         } else {
             rv.adapter = AcceptedRequestAdapter(
                 acceptedRequests,
-                acceptedDonorPhones,
                 onCallClick = { request ->
-                    val number = acceptedDonorPhones[request.toUserId]
-                    if (number.isNullOrBlank() || number == "Phone unavailable") {
-                        Toast.makeText(this, "Phone number unavailable", Toast.LENGTH_SHORT).show()
+                    if (request.toUserPhone.isBlank()) {
+                        Toast.makeText(this, "Phone hidden by donor", Toast.LENGTH_SHORT).show()
                     } else {
-                        startActivity(Intent(Intent.ACTION_DIAL, Uri.parse("tel:$number")))
+                        startActivity(Intent(Intent.ACTION_DIAL, Uri.parse("tel:${request.toUserPhone}")))
                     }
                 },
                 onMarkDonatedClick = { request, position ->
@@ -302,6 +299,7 @@ class SendRequestActivity : AppCompatActivity() {
                         toUserId = doc.getString("toUserId") ?: "",
                         toUserName = doc.getString("toUserName") ?: "Unknown donor",
                         toUserLocation = doc.getString("toUserLocation") ?: "",
+                        toUserPhone = doc.getString("toUserPhone") ?: "",
                         bloodGroup = doc.getString("bloodGroup") ?: "",
                         distanceKm = doc.getDouble("distanceKm") ?: 0.0,
                         status = doc.getString("status") ?: BloodRequest.STATUS_PENDING,
@@ -313,44 +311,11 @@ class SendRequestActivity : AppCompatActivity() {
                 sentRequests = all.filter { it.status != BloodRequest.STATUS_ACCEPTED }
                 acceptedRequests = all.filter { it.status == BloodRequest.STATUS_ACCEPTED }
 
-                // Fetch donor phones up front (not lazily on tab switch) so the
-                // Accepted tab's content is ready before any swipe animation starts.
-                loadDonorPhonesThenRender()
+                renderFront()
             }
             .addOnFailureListener {
                 Toast.makeText(this, "Couldn't load requests", Toast.LENGTH_SHORT).show()
             }
-    }
-
-    private fun loadDonorPhonesThenRender() {
-        val donorIds = acceptedRequests.map { it.toUserId }.distinct()
-        if (donorIds.isEmpty()) {
-            acceptedDonorPhones = emptyMap()
-            renderFront()
-            return
-        }
-
-        val phones = mutableMapOf<String, String>()
-        var remaining = donorIds.size
-
-        donorIds.forEach { donorId ->
-            db.collection("Users").document(donorId).get()
-                .addOnSuccessListener { doc ->
-                    phones[donorId] = doc.getString("phone") ?: "Phone unavailable"
-                    remaining--
-                    if (remaining == 0) {
-                        acceptedDonorPhones = phones
-                        renderFront()
-                    }
-                }
-                .addOnFailureListener {
-                    remaining--
-                    if (remaining == 0) {
-                        acceptedDonorPhones = phones
-                        renderFront()
-                    }
-                }
-        }
     }
 
     private fun confirmMarkAsDonated(request: BloodRequest, position: Int) {
@@ -435,6 +400,12 @@ class SendRequestActivity : AppCompatActivity() {
                     .addOnFailureListener { e ->
                         Log.e("DONATION_DEBUG", "Failed to update donor stats: ${e.message}")
                         Toast.makeText(this, "Couldn't update donor stats: ${e.message}", Toast.LENGTH_LONG).show()
+                    }
+
+                db.collection("Donors").document(request.toUserId)
+                    .update("lastDonationDate", now)
+                    .addOnFailureListener { e ->
+                        Log.w("DONATION_DEBUG", "Donors lastDonationDate not updated: ${e.message}")
                     }
 
                 acceptedRequests = acceptedRequests.map {

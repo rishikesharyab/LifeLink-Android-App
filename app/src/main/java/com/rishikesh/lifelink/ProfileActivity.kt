@@ -159,6 +159,7 @@ class ProfileActivity : AppCompatActivity() {
                     db.collection("Users")
                         .document(user.uid)
                         .update("available", checked)
+                        .addOnSuccessListener { DonorDirectory.sync(user.uid) }
                         .addOnFailureListener {
                             Toast.makeText(
                                 this,

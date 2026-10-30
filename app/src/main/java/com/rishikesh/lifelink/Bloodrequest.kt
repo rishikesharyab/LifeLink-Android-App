@@ -20,6 +20,7 @@ data class BloodRequest(
     val toUserId: String = "",
     val toUserName: String = "",
     val toUserLocation: String = "",
+    val toUserPhone: String = "", // set by the donor on accept, only if phoneVisible
     val bloodGroup: String = "",
     val distanceKm: Double = 0.0,
     val status: String = STATUS_PENDING, // pending | accepted | declined

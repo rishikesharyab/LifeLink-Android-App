@@ -10,7 +10,6 @@ import com.rishikesh.lifelink.model.BloodRequest
 
 class AcceptedRequestAdapter(
     private val items: List<BloodRequest>,
-    private val donorPhones: Map<String, String>,
     private val onCallClick: (BloodRequest) -> Unit,
     private val onMarkDonatedClick: (BloodRequest, Int) -> Unit
 ) : RecyclerView.Adapter<AcceptedRequestAdapter.ViewHolder>() {
@@ -38,10 +37,12 @@ class AcceptedRequestAdapter(
         holder.bloodGroup.text = request.bloodGroup
         holder.distance.text = "%.1f km".format(request.distanceKm)
 
-        val phoneNumber = donorPhones[request.toUserId]
-        holder.phone.text = phoneNumber ?: "Phone unavailable"
+        val hasPhone = request.toUserPhone.isNotBlank()
+        holder.phone.text = if (hasPhone) request.toUserPhone else "Phone hidden"
 
-        holder.callButton.setOnClickListener { onCallClick(request) }
+        holder.callButton.isEnabled = hasPhone
+        holder.callButton.alpha = if (hasPhone) 1f else 0.4f
+        holder.callButton.setOnClickListener(if (hasPhone) View.OnClickListener { onCallClick(request) } else null)
 
         if (request.donated) {
             holder.donatedButton.text = "Donated ✓"

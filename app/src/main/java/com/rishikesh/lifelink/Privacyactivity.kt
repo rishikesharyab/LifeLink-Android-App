@@ -87,6 +87,10 @@ class PrivacyActivity : AppCompatActivity() {
         db.collection("Users")
             .document(uid)
             .update(field, value)
+            .addOnSuccessListener {
+                // Only location precision changes what's in the public Donors doc
+                if (field == "preciseLocation") DonorDirectory.sync(uid)
+            }
             .addOnFailureListener {
                 Toast.makeText(this, "Couldn't save. Try again.", Toast.LENGTH_SHORT).show()
             }
@@ -94,13 +98,13 @@ class PrivacyActivity : AppCompatActivity() {
 
     private fun updatePhoneSubtitle(visible: Boolean) {
         tvPhoneVisibilitySubtitle.text =
-            if (visible) "Visible to patients who find you nearby"
-            else "Hidden — patients can still message you in-app"
+            if (visible) "Shared with a patient only after you accept their request"
+            else "Not shared — patients won't see your number when you accept"
     }
 
     private fun updateLocationSubtitle(exact: Boolean) {
         tvLocationPrecisionSubtitle.text =
-            if (exact) "Your precise location is shown on the map"
-            else "Only your approximate area is shown, not exact address"
+            if (exact) "Patients see your exact position on the map"
+            else "Patients see only an approximate position (within about 1 km)"
     }
 }

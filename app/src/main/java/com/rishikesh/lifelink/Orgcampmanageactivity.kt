@@ -400,6 +400,12 @@ class OrgCampManageActivity : AppCompatActivity() {
                         .addOnFailureListener { e ->
                             android.util.Log.e("DONATION_SYNC", "Failed to update donor stats: ${e.message}")
                         }
+
+                    db.collection("Donors").document(application.donorId)
+                        .update("lastDonationDate", now)
+                        .addOnFailureListener { e ->
+                            android.util.Log.w("DONATION_SYNC", "Donors lastDonationDate not updated: ${e.message}")
+                        }
                 }
 
                 Toast.makeText(this, "${application.name} marked as donated", Toast.LENGTH_SHORT).show()

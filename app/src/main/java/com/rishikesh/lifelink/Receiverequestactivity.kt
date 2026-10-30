@@ -100,15 +100,35 @@ class ReceiveRequestActivity : AppCompatActivity() {
     }
 
     private fun respond(request: BloodRequest, position: Int, newStatus: String) {
+        if (newStatus != BloodRequest.STATUS_ACCEPTED) {
+            sendResponse(request, position, newStatus, null)
+            return
+        }
+
+        // Share the number only if the donor allows it (Privacy → Show phone number)
+        val uid = auth.currentUser?.uid ?: return
+        db.collection("Users").document(uid).get()
+            .addOnSuccessListener { doc ->
+                val visible = doc.getBoolean("phoneVisible") ?: true
+                val phone = doc.getString("phone").orEmpty()
+                sendResponse(request, position, newStatus, if (visible && phone.isNotBlank()) phone else null)
+            }
+            .addOnFailureListener {
+                Toast.makeText(this, "Couldn't respond. Try again.", Toast.LENGTH_SHORT).show()
+            }
+    }
+
+    private fun sendResponse(request: BloodRequest, position: Int, newStatus: String, sharedPhone: String?) {
         val docId = BloodRequest.docId(request.fromUserId, request.toUserId)
 
+        val updates = mutableMapOf<String, Any>(
+            "status" to newStatus,
+            "respondedAt" to Timestamp.now()
+        )
+        if (sharedPhone != null) updates["toUserPhone"] = sharedPhone
+
         db.collection("BloodRequests").document(docId)
-            .update(
-                mapOf(
-                    "status" to newStatus,
-                    "respondedAt" to Timestamp.now()
-                )
-            )
+            .update(updates)
             .addOnSuccessListener {
                 if (newStatus == BloodRequest.STATUS_ACCEPTED) {
                     incomingRequests[position] = request.copy(status = BloodRequest.STATUS_ACCEPTED)
@@ -122,10 +142,11 @@ class ReceiveRequestActivity : AppCompatActivity() {
                     }
                 }
 
-                val message = if (newStatus == BloodRequest.STATUS_ACCEPTED)
-                    "Request accepted — ${request.fromUserName} can now see your number"
-                else
-                    "Request declined"
+                val message = when {
+                    newStatus != BloodRequest.STATUS_ACCEPTED -> "Request declined"
+                    sharedPhone != null -> "Request accepted — ${request.fromUserName} can now see your number"
+                    else -> "Request accepted — your number stays hidden"
+                }
                 Toast.makeText(this, message, Toast.LENGTH_SHORT).show()
             }
             .addOnFailureListener {

@@ -530,7 +530,7 @@ class PatientHomeActivity : AppCompatActivity(), OnMapReadyCallback {
             return
         }
 
-        db.collection("Users")
+        db.collection("Donors")
             .whereEqualTo("bloodGroup", bloodGroup)
             .get()
             .addOnSuccessListener { documents ->
@@ -566,7 +566,6 @@ class PatientHomeActivity : AppCompatActivity(), OnMapReadyCallback {
                         name = doc.getString("name") ?: "Unknown",
                         location = doc.getString("location") ?: "",
                         bloodGroup = doc.getString("bloodGroup") ?: "N/A",
-                        phone = doc.getString("phone") ?: "N/A",
                         latitude = lat,
                         longitude = lng,
                         distanceKm = distance
@@ -741,6 +740,8 @@ class PatientHomeActivity : AppCompatActivity(), OnMapReadyCallback {
             .addOnSuccessListener { doc ->
                 if (!doc.exists()) return@addOnSuccessListener
 
+                DonorDirectory.migrateIfNeeded(this, uid)
+
                 val donor = Donor(
                     id = uid,
                     name = doc.getString("name") ?: "",
@@ -861,6 +862,7 @@ class PatientHomeActivity : AppCompatActivity(), OnMapReadyCallback {
             val uid = FirebaseAuth.getInstance().currentUser?.uid ?: return@setOnCheckedChangeListener
             db.collection("Users").document(uid)
                 .update("available", isChecked)
+                .addOnSuccessListener { DonorDirectory.sync(uid) }
                 .addOnFailureListener {
                     Toast.makeText(this, "Couldn't update availability. Try again.", Toast.LENGTH_SHORT).show()
                 }
