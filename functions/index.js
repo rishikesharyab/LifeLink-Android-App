@@ -4,8 +4,9 @@ const {
   onDocumentUpdated,
 } = require("firebase-functions/v2/firestore");
 const { onSchedule } = require("firebase-functions/v2/scheduler");
+const logger = require("firebase-functions/logger");
 const { initializeApp } = require("firebase-admin/app");
-const { getFirestore, Timestamp } = require("firebase-admin/firestore");
+const { getFirestore, Timestamp, FieldValue } = require("firebase-admin/firestore");
 const { getMessaging } = require("firebase-admin/messaging");
 
 initializeApp();
@@ -13,6 +14,7 @@ const db = getFirestore();
 
 const ADMIN_UID = "QmYpTqwNGcXDem7R0nmdsDuxjxB3";
 const NEARBY_CAMP_KM = 10;
+const SKEW_MS = 5 * 60 * 1000;
 
 // ---------- helpers ----------
 
@@ -51,6 +53,113 @@ function distanceKm(lat1, lon1, lat2, lon2) {
     Math.cos(rad(lat1)) * Math.cos(rad(lat2)) * Math.sin(rad(lon2 - lon1) / 2) ** 2;
   return 6371 * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
 }
+
+// ---------- donation recording (trusted writes) ----------
+
+/** Client-supplied donatedAt is trusted only if it isn't in the future. */
+function donationDate(v) {
+  const now = Timestamp.now();
+  return v instanceof Timestamp && v.toMillis() <= now.toMillis() + SKEW_MS ? v : now;
+}
+
+/**
+ * One transaction: donations doc + totalDonations++ + lastDonationDate on
+ * Users and Donors. If the donations doc already exists nothing is written,
+ * so retries and re-triggers can never double count.
+ */
+async function recordDonation(d) {
+  const userRef = db.doc(`Users/${d.donorId}`);
+  const donationRef = userRef.collection("donations").doc(d.donationId);
+  const publicRef = db.doc(`Donors/${d.donorId}`);
+
+  await db.runTransaction(async (tx) => {
+    const [donation, user, pub] = await Promise.all([
+      tx.get(donationRef), tx.get(userRef), tx.get(publicRef),
+    ]);
+    if (donation.exists) return;
+    if (!user.exists) {
+      logger.warn("Donor profile missing, skipping", { donorId: d.donorId });
+      return;
+    }
+
+    const prev = user.get("lastDonationDate");
+    const last = prev && prev.toMillis() > d.date.toMillis() ? prev : d.date;
+
+    const record = {
+      date: d.date,
+      campName: d.campName,
+      location: d.location,
+      bloodGroup: user.get("bloodGroup") ?? "",
+      unitsDonated: 1,
+      createdAt: FieldValue.serverTimestamp(),
+    };
+    if (d.receiverName) record.receiverName = d.receiverName;
+    if (d.receiverLocation) record.receiverLocation = d.receiverLocation;
+
+    tx.set(donationRef, record);
+    tx.update(userRef, {
+      totalDonations: FieldValue.increment(1),
+      lastDonationDate: last,
+    });
+    if (pub.exists) tx.update(publicRef, { lastDonationDate: last });
+  });
+}
+
+// Direct request: patient flips donated false → true. Rules allow only the
+// patient, and only on an accepted request; re-checked here.
+exports.onRequestDonated = onDocumentUpdated("BloodRequests/{requestId}", async (event) => {
+  const before = event.data.before.data();
+  const after = event.data.after.data();
+  if (before.donated === true || after.donated !== true) return;
+
+  const { fromUserId, toUserId } = after;
+  if (
+    after.status !== "accepted" || !fromUserId || !toUserId || fromUserId === toUserId ||
+    event.params.requestId !== `${fromUserId}_${toUserId}`
+  ) {
+    logger.warn("Rejected donated flag", { requestId: event.params.requestId });
+    return;
+  }
+
+  await recordDonation({
+    donationId: `req_${event.params.requestId}`,
+    donorId: toUserId,
+    date: donationDate(after.donatedAt),
+    campName: "Direct request",
+    location: after.fromUserLocation ?? "",
+    receiverName: after.fromUserName ?? "",
+    receiverLocation: after.fromUserLocation ?? "",
+  });
+});
+
+// Camp application: org flips donated false → true. Rules allow only the
+// camp's org; re-checks camp exists, is verified, org isn't the donor.
+exports.onCampApplicationDonated = onDocumentUpdated(
+  "BloodCamps/{campId}/applications/{applicationId}",
+  async (event) => {
+    const before = event.data.before.data();
+    const after = event.data.after.data();
+    if (before.donated === true || after.donated !== true) return;
+
+    const donorId = after.donorId;
+    const camp = await db.doc(`BloodCamps/${event.params.campId}`).get();
+    const orgId = camp.get("orgId");
+
+    if (!donorId || !camp.exists || !orgId || orgId === donorId ||
+        camp.get("verificationStatus") !== "verified") {
+      logger.warn("Rejected donated flag", { path: event.document });
+      return;
+    }
+
+    await recordDonation({
+      donationId: `camp_${event.params.campId}_${event.params.applicationId}`,
+      donorId,
+      date: donationDate(after.donatedAt),
+      campName: camp.get("campName") ?? "",
+      location: camp.get("location") ?? "",
+    });
+  }
+);
 
 // ---------- 1, 2, 3: BloodRequests ----------
 

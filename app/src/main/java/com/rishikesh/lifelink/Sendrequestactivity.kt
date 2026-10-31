@@ -3,7 +3,6 @@ package com.rishikesh.lifelink
 import android.content.Intent
 import android.net.Uri
 import android.os.Bundle
-import android.util.Log
 import android.view.GestureDetector
 import android.view.MotionEvent
 import android.view.View
@@ -350,6 +349,7 @@ class SendRequestActivity : AppCompatActivity() {
             }
     }
 
+    // Only sets donated/donatedAt. A Cloud Function writes the donation history and donor stats.
     private fun markAsDonated(request: BloodRequest, position: Int) {
         val docId = BloodRequest.docId(request.fromUserId, request.toUserId)
         val now = Timestamp.now()
@@ -362,52 +362,6 @@ class SendRequestActivity : AppCompatActivity() {
                 )
             )
             .addOnSuccessListener {
-
-                val donationRecord = hashMapOf(
-                    "date" to now,
-                    "campName" to "Direct request",
-                    "location" to request.fromUserLocation,
-                    "bloodGroup" to request.bloodGroup,
-                    "unitsDonated" to 1,
-                    "receiverName" to request.fromUserName,
-                    "receiverLocation" to request.fromUserLocation
-                )
-
-                db.collection("Users")
-                    .document(request.toUserId)
-                    .collection("donations")
-                    .add(donationRecord)
-                    .addOnSuccessListener {
-                        Log.d("DONATION_DEBUG", "Donation record added for ${request.toUserId}")
-                    }
-                    .addOnFailureListener { e ->
-                        Log.e("DONATION_DEBUG", "Failed to add donation record", e)
-                        Toast.makeText(
-                            this,
-                            "Marked donated, but couldn't save to their history: ${e.message}",
-                            Toast.LENGTH_LONG
-                        ).show()
-                    }
-
-                db.collection("Users")
-                    .document(request.toUserId)
-                    .update(
-                        mapOf(
-                            "totalDonations" to com.google.firebase.firestore.FieldValue.increment(1),
-                            "lastDonationDate" to now
-                        )
-                    )
-                    .addOnFailureListener { e ->
-                        Log.e("DONATION_DEBUG", "Failed to update donor stats: ${e.message}")
-                        Toast.makeText(this, "Couldn't update donor stats: ${e.message}", Toast.LENGTH_LONG).show()
-                    }
-
-                db.collection("Donors").document(request.toUserId)
-                    .update("lastDonationDate", now)
-                    .addOnFailureListener { e ->
-                        Log.w("DONATION_DEBUG", "Donors lastDonationDate not updated: ${e.message}")
-                    }
-
                 acceptedRequests = acceptedRequests.map {
                     if (it.id == request.id) it.copy(donated = true) else it
                 }

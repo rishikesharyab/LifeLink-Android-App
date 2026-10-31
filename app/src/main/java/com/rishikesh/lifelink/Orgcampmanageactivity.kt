@@ -360,6 +360,7 @@ class OrgCampManageActivity : AppCompatActivity() {
             .show()
     }
 
+    // Only sets donated/donatedAt. A Cloud Function writes the donation history and donor stats.
     private fun markAsDonated(application: CampApplication) {
         val now = Timestamp.now()
 
@@ -372,42 +373,6 @@ class OrgCampManageActivity : AppCompatActivity() {
                 )
             )
             .addOnSuccessListener {
-
-                if (application.donorId.isNotBlank()) {
-                    val donationRecord = hashMapOf(
-                        "date" to now,
-                        "campName" to camp.campName,
-                        "location" to camp.location,
-                        "bloodGroup" to application.bloodGroup,
-                        "unitsDonated" to 1
-                    )
-
-                    db.collection("Users").document(application.donorId)
-                        .collection("donations")
-                        .add(donationRecord)
-                        .addOnFailureListener { e ->
-                            android.util.Log.e("DONATION_SYNC", "Failed to add donation history: ${e.message}")
-                            Toast.makeText(this, "Marked donated, but couldn't sync history: ${e.message}", Toast.LENGTH_LONG).show()
-                        }
-
-                    db.collection("Users").document(application.donorId)
-                        .update(
-                            mapOf(
-                                "totalDonations" to com.google.firebase.firestore.FieldValue.increment(1),
-                                "lastDonationDate" to now
-                            )
-                        )
-                        .addOnFailureListener { e ->
-                            android.util.Log.e("DONATION_SYNC", "Failed to update donor stats: ${e.message}")
-                        }
-
-                    db.collection("Donors").document(application.donorId)
-                        .update("lastDonationDate", now)
-                        .addOnFailureListener { e ->
-                            android.util.Log.w("DONATION_SYNC", "Donors lastDonationDate not updated: ${e.message}")
-                        }
-                }
-
                 Toast.makeText(this, "${application.name} marked as donated", Toast.LENGTH_SHORT).show()
                 loadApplications()
             }
