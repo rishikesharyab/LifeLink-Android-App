@@ -487,7 +487,6 @@ class NgoRegistrationActivity : AppCompatActivity() {
             "registeredBy" to emptyList<String>(),
             "orgId" to orgId,
             "submittedAt" to com.google.firebase.Timestamp.now(),
-            "verificationStatus" to "pending",
             "logoUrl" to (logoDownloadUrl ?: ""),
             "orgType" to (formData["org_type"] ?: ""),
             "yearEstablished" to (formData["year_established"] ?: ""),
@@ -516,15 +515,11 @@ class NgoRegistrationActivity : AppCompatActivity() {
             .onSuccessTask { userRef.get() }
             .addOnSuccessListener { userDoc ->
                 val alreadyVerified = userDoc.getString("verificationStatus") == "verified"
-                campData["verificationStatus"] = if (alreadyVerified) "verified" else "pending"
+                // verificationStatus (camp + Users) is set by the onCampCreated Cloud Function
 
                 db.collection("BloodCamps")
                     .add(campData)
                     .addOnSuccessListener {
-                        val userUpdate = mutableMapOf<String, Any>("isOrganization" to true)
-                        if (!alreadyVerified) userUpdate["verificationStatus"] = "pending"
-                        userRef.set(userUpdate, SetOptions.merge())
-
                         Toast.makeText(
                             this,
                             if (alreadyVerified) "Camp posted" else "Camp registered — pending verification",

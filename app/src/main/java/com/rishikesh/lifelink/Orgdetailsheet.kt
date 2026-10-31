@@ -257,6 +257,10 @@ object OrgDetailSheet {
             content.addView(text(label, 13f, CORAL).apply {
                 setPadding(0, px(14), 0, 0)
                 setOnClickListener {
+                    if (!isTrustedStorageUrl(url)) {
+                        Toast.makeText(ctx, "Link isn't a Firebase Storage URL", Toast.LENGTH_SHORT).show()
+                        return@setOnClickListener
+                    }
                     try {
                         ctx.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(url)).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
                     } catch (e: Exception) {
@@ -266,4 +270,13 @@ object OrgDetailSheet {
             })
         }
     }
+}
+
+/** Only https links on the Firebase Storage download host may be opened from admin screens. */
+internal fun isTrustedStorageUrl(url: String?): Boolean {
+    if (url.isNullOrBlank()) return false
+    val uri = try { Uri.parse(url) } catch (e: Exception) { return false }
+    return uri.scheme == "https" &&
+            uri.host == "firebasestorage.googleapis.com" &&
+            uri.path?.startsWith("/v0/b/") == true
 }

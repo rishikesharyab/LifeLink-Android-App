@@ -14,13 +14,14 @@ import androidx.recyclerview.widget.RecyclerView
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.DocumentSnapshot
 import com.google.firebase.firestore.FirebaseFirestore
-import com.google.firebase.firestore.SetOptions
+import com.google.firebase.functions.FirebaseFunctions
 import com.rishikesh.lifelink.model.NgoRegistration
 import com.rishikesh.lifelink.util.applySystemBarInsets
 
 class AdminApprovalActivity : AppCompatActivity() {
 
     private val db = FirebaseFirestore.getInstance()
+    private val functions = FirebaseFunctions.getInstance()
 
     private lateinit var recyclerView: RecyclerView
     private lateinit var tvNoOrgs: TextView
@@ -35,12 +36,20 @@ class AdminApprovalActivity : AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
-        val uid = FirebaseAuth.getInstance().currentUser?.uid
-        if (uid !in AdminConfig.ADMIN_UIDS) {
+        // Admin = custom claim on the ID token (set with set-admin.js)
+        val user = FirebaseAuth.getInstance().currentUser
+        if (user == null) {
             finish()
             return
         }
+        user.getIdToken(true)
+            .addOnSuccessListener { result ->
+                if (result.claims["admin"] == true) showScreen() else finish()
+            }
+            .addOnFailureListener { finish() }
+    }
 
+    private fun showScreen() {
         setContentView(R.layout.activity_admin_approval)
         applySystemBarInsets()
 
@@ -177,6 +186,10 @@ class AdminApprovalActivity : AppCompatActivity() {
             Toast.makeText(this, "No certificate uploaded", Toast.LENGTH_SHORT).show()
             return
         }
+        if (!isTrustedStorageUrl(org.certificateUrl)) {
+            Toast.makeText(this, "Certificate link isn't a Firebase Storage URL", Toast.LENGTH_SHORT).show()
+            return
+        }
         startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(org.certificateUrl)))
     }
 
@@ -192,42 +205,23 @@ class AdminApprovalActivity : AppCompatActivity() {
             .show()
     }
 
-    private fun approveOrg(org: NgoRegistration) {
-        db.collection("Users").document(org.uid)
-            .set(
-                mapOf(
-                    "verificationStatus" to "verified",
-                    "verifiedAt" to com.google.firebase.Timestamp.now(),
-                    "rejectionReason" to ""
-                ),
-                SetOptions.merge()
-            )
+    private fun approveOrg(org: NgoRegistration) =
+        reviewOrg(org, "verified", "", "${org.orgName} approved", "Couldn't approve. Try again.")
+
+    private fun rejectOrg(org: NgoRegistration, reason: String) =
+        reviewOrg(org, "rejected", reason, "${org.orgName} rejected", "Couldn't reject. Try again.")
+
+    // Cloud Function sets Users + BloodCamps verificationStatus; clients can't write them
+    private fun reviewOrg(org: NgoRegistration, decision: String, reason: String, okMsg: String, failMsg: String) {
+        functions.getHttpsCallable("reviewOrg")
+            .call(hashMapOf("orgId" to org.uid, "decision" to decision, "reason" to reason))
             .addOnSuccessListener {
-                syncCampStatus(org.uid, "verified")
-                Toast.makeText(this, "${org.orgName} approved", Toast.LENGTH_SHORT).show()
+                Toast.makeText(this, okMsg, Toast.LENGTH_SHORT).show()
                 loadPendingCount()
                 loadOrgs(currentTab)
             }
             .addOnFailureListener {
-                Toast.makeText(this, "Couldn't approve. Try again.", Toast.LENGTH_SHORT).show()
-            }
-    }
-
-    /**
-     * An org can have multiple BloodCamps docs (one per camp created).
-     * Verification is per-org, so every camp belonging to this orgId
-     * needs its own verificationStatus field updated to match — that's
-     * the field donor-facing camp listings should filter on.
-     */
-    private fun syncCampStatus(orgId: String, status: String) {
-        db.collection("BloodCamps")
-            .whereEqualTo("orgId", orgId)
-            .get()
-            .addOnSuccessListener { campDocs ->
-                campDocs.documents.forEach { camp ->
-                    db.collection("BloodCamps").document(camp.id)
-                        .update("verificationStatus", status)
-                }
+                Toast.makeText(this, failMsg, Toast.LENGTH_SHORT).show()
             }
     }
 
@@ -246,26 +240,6 @@ class AdminApprovalActivity : AppCompatActivity() {
             }
             .setNegativeButton("Cancel") { dialog, _ -> dialog.dismiss() }
             .show()
-    }
-
-    private fun rejectOrg(org: NgoRegistration, reason: String) {
-        db.collection("Users").document(org.uid)
-            .set(
-                mapOf(
-                    "verificationStatus" to "rejected",
-                    "rejectionReason" to reason
-                ),
-                SetOptions.merge()
-            )
-            .addOnSuccessListener {
-                syncCampStatus(org.uid, "rejected")
-                Toast.makeText(this, "${org.orgName} rejected", Toast.LENGTH_SHORT).show()
-                loadPendingCount()
-                loadOrgs(currentTab)
-            }
-            .addOnFailureListener {
-                Toast.makeText(this, "Couldn't reject. Try again.", Toast.LENGTH_SHORT).show()
-            }
     }
 
     private fun showEmpty() {
