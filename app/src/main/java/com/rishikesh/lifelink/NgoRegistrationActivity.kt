@@ -5,6 +5,7 @@ import android.app.DatePickerDialog
 import android.app.TimePickerDialog
 import android.content.Intent
 import android.net.Uri
+import android.provider.OpenableColumns
 import android.os.Bundle
 import android.text.InputType
 import android.view.View
@@ -20,6 +21,7 @@ import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.firestore.SetOptions
 import com.google.firebase.storage.FirebaseStorage
+import com.google.firebase.storage.StorageMetadata
 import java.text.SimpleDateFormat
 import java.util.Calendar
 import java.util.Locale
@@ -31,6 +33,7 @@ class NgoRegistrationActivity : AppCompatActivity() {
         private const val REQ_CERT_UPLOAD = 102
         private const val REQ_LOCATION_PICKER = 103
         private const val PHONE_DIGITS = 10
+        private const val MAX_UPLOAD_BYTES = 5L * 1024 * 1024
     }
 
     private lateinit var tvStepLabel: TextView
@@ -56,7 +59,8 @@ class NgoRegistrationActivity : AppCompatActivity() {
     private var pickedLng: Double = 0.0
     private lateinit var tvAddressValue: TextView
 
-    private var certDownloadUrl: String? = null
+    private var certPath: String? = null
+    private var legacyCertUrl: String? = null // certs uploaded before paths were stored
     private var logoDownloadUrl: String? = null
     private var certUploading = false
     private lateinit var tvCertStatus: TextView
@@ -166,7 +170,8 @@ class NgoRegistrationActivity : AppCompatActivity() {
                 ).forEach { (formKey, dbKey) ->
                     doc.getString(dbKey)?.takeIf { it.isNotBlank() }?.let { formData[formKey] = it }
                 }
-                certDownloadUrl = doc.getString("certificateUrl")?.takeIf { it.isNotBlank() }
+                certPath = doc.getString("certificatePath")?.takeIf { it.isNotBlank() }
+                legacyCertUrl = doc.getString("certificateUrl")?.takeIf { it.isNotBlank() }
                 onDone()
             }
             .addOnFailureListener { onDone() }
@@ -304,13 +309,20 @@ class NgoRegistrationActivity : AppCompatActivity() {
         addInputField("ngo_darpan_id", "NGO Darpan ID (for NGOs)", optional = true, prefill = formData["ngo_darpan_id"] as? String)
         addInputField("fssai_license", "FSSAI / Blood Bank License Number", optional = true, prefill = formData["fssai_license"] as? String)
 
-        tvCertStatus = addUploadRow("Registration Certificate *", certDownloadUrl, certUploading) {
-            val intent = Intent(Intent.ACTION_GET_CONTENT).apply { type = "*/*" }
+        tvCertStatus = addUploadRow("Registration Certificate *", certPath ?: legacyCertUrl, certUploading) {
+            val intent = Intent(Intent.ACTION_GET_CONTENT).apply {
+                type = "*/*"
+                addCategory(Intent.CATEGORY_OPENABLE)
+                putExtra(Intent.EXTRA_MIME_TYPES, arrayOf("application/pdf", "image/*"))
+            }
             startActivityForResult(intent, REQ_CERT_UPLOAD)
         }
 
         tvLogoStatus = addUploadRow("Organization Logo", logoDownloadUrl, false) {
-            val intent = Intent(Intent.ACTION_GET_CONTENT).apply { type = "image/*" }
+            val intent = Intent(Intent.ACTION_GET_CONTENT).apply {
+                type = "image/*"
+                addCategory(Intent.CATEGORY_OPENABLE)
+            }
             startActivityForResult(intent, REQ_LOGO_UPLOAD)
         }
     }
@@ -346,7 +358,7 @@ class NgoRegistrationActivity : AppCompatActivity() {
                 Toast.makeText(this, "Certificate is still uploading, please wait", Toast.LENGTH_SHORT).show()
                 return false
             }
-            if (certDownloadUrl == null) {
+            if (certPath == null && legacyCertUrl == null) {
                 Toast.makeText(this, "Please upload your registration certificate", Toast.LENGTH_SHORT).show()
                 return false
             }
@@ -429,36 +441,61 @@ class NgoRegistrationActivity : AppCompatActivity() {
     private fun uploadDocument(uri: Uri, isCertificate: Boolean) {
         val uid = FirebaseAuth.getInstance().currentUser?.uid ?: return
         val statusView = if (isCertificate) tvCertStatus else tvLogoStatus
-        val extension = MimeTypeMap.getSingleton()
-            .getExtensionFromMimeType(contentResolver.getType(uri)) ?: "dat"
+
+        val mime = contentResolver.getType(uri)
+        val allowed = mime != null &&
+                (mime.startsWith("image/") || (isCertificate && mime == "application/pdf"))
+        val extension = mime?.let { MimeTypeMap.getSingleton().getExtensionFromMimeType(it) }
+        if (!allowed || extension == null) {
+            Toast.makeText(
+                this,
+                if (isCertificate) "Choose a PDF or image file" else "Choose an image file",
+                Toast.LENGTH_SHORT
+            ).show()
+            return
+        }
+
+        val size = contentResolver.query(uri, arrayOf(OpenableColumns.SIZE), null, null, null)?.use { c ->
+            if (c.moveToFirst() && !c.isNull(0)) c.getLong(0) else -1L
+        } ?: -1L
+        if (size > MAX_UPLOAD_BYTES) {
+            Toast.makeText(this, "File must be 5 MB or smaller", Toast.LENGTH_SHORT).show()
+            return
+        }
+
         val fileName = "${if (isCertificate) "cert" else "logo"}_${System.currentTimeMillis()}.$extension"
-        val ref = storage.reference.child("ngo_documents/$uid/$fileName")
+        val path = "ngo_documents/$uid/$fileName"
+        val ref = storage.reference.child(path)
+        val metadata = StorageMetadata.Builder().setContentType(mime).build()
 
         if (isCertificate) certUploading = true
         statusView.text = "Uploading…"
 
-        ref.putFile(uri)
+        ref.putFile(uri, metadata)
             .addOnSuccessListener {
-                ref.downloadUrl
-                    .addOnSuccessListener { url ->
-                        if (isCertificate) {
-                            certDownloadUrl = url.toString()
-                            certUploading = false
-                        } else {
+                if (isCertificate) {
+                    certPath = path
+                    legacyCertUrl = null
+                    certUploading = false
+                    markUploaded(statusView, fileName)
+                } else {
+                    ref.downloadUrl
+                        .addOnSuccessListener { url ->
                             logoDownloadUrl = url.toString()
+                            markUploaded(statusView, fileName)
                         }
-                        statusView.text = "Uploaded — $fileName"
-                        statusView.setTextColor(0xFF8B3A1F.toInt())
-                    }
-                    .addOnFailureListener {
-                        if (isCertificate) certUploading = false
-                        statusView.text = "Upload failed — tap to retry"
-                    }
+                        .addOnFailureListener { statusView.text = "Upload failed — tap to retry" }
+                }
             }
             .addOnFailureListener {
                 if (isCertificate) certUploading = false
                 statusView.text = "Upload failed — tap to retry"
             }
+    }
+
+    private fun markUploaded(statusView: TextView, fileName: String) {
+        statusView.text = "Uploaded — $fileName"
+        statusView.setTextColor(0xFF8B3A1F.toInt())
     }
 
     // ── Submit to Firestore ───────────────────────────────────────────────────
@@ -504,12 +541,12 @@ class NgoRegistrationActivity : AppCompatActivity() {
         val verification = hashMapOf<String, Any>(
             "orgId" to orgId,
             "panNumber" to (formData["pan_number"] ?: ""),
-            "certificateUrl" to (certDownloadUrl ?: ""),
             "regNumber" to (formData["reg_number"] ?: ""),
             "ngoDarpanId" to (formData["ngo_darpan_id"] ?: ""),
             "fssaiLicense" to (formData["fssai_license"] ?: ""),
             "updatedAt" to com.google.firebase.Timestamp.now()
         )
+        certPath?.let { verification["certificatePath"] = it }
         db.collection("OrgVerification").document(orgId)
             .set(verification, SetOptions.merge())
             .onSuccessTask { userRef.get() }

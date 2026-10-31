@@ -15,6 +15,7 @@ import com.google.android.material.bottomsheet.BottomSheetBehavior
 import com.google.android.material.bottomsheet.BottomSheetDialog
 import com.google.firebase.firestore.DocumentSnapshot
 import com.google.firebase.firestore.FirebaseFirestore
+import com.google.firebase.storage.FirebaseStorage
 
 /**
  * Admin bottom sheet for an organization's camps (BloodCamps where orgId == orgUid).
@@ -209,7 +210,7 @@ object OrgDetailSheet {
             row("NGO Darpan ID", verification?.getString("ngoDarpanId"))
             row("FSSAI / licence", verification?.getString("fssaiLicense"))
 
-            link("📎 View registration certificate", verification?.getString("certificateUrl"))
+            certLink(verification?.getString("certificatePath"), verification?.getString("certificateUrl"))
             link("🖼️ View logo", d.getString("logoUrl"))
         }
 
@@ -254,20 +255,34 @@ object OrgDetailSheet {
 
         private fun link(label: String, url: String?) {
             if (url.isNullOrBlank()) return
-            content.addView(text(label, 13f, CORAL).apply {
-                setPadding(0, px(14), 0, 0)
-                setOnClickListener {
-                    if (!isTrustedStorageUrl(url)) {
-                        Toast.makeText(ctx, "Link isn't a Firebase Storage URL", Toast.LENGTH_SHORT).show()
-                        return@setOnClickListener
-                    }
-                    try {
-                        ctx.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(url)).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
-                    } catch (e: Exception) {
-                        Toast.makeText(ctx, "Can't open file", Toast.LENGTH_SHORT).show()
-                    }
-                }
+            content.addView(linkView(label) { openUrl(url) })
+        }
+
+        // Private certificate: resolve a fresh URL at view time
+        private fun certLink(path: String?, legacyUrl: String?) {
+            if (path.isNullOrBlank()) { link("📎 View registration certificate", legacyUrl); return }
+            content.addView(linkView("📎 View registration certificate") {
+                FirebaseStorage.getInstance().reference.child(path).downloadUrl
+                    .addOnSuccessListener { openUrl(it.toString()) }
+                    .addOnFailureListener { Toast.makeText(ctx, "Can't open file", Toast.LENGTH_SHORT).show() }
             })
+        }
+
+        private fun linkView(label: String, onClick: () -> Unit) = text(label, 13f, CORAL).apply {
+            setPadding(0, px(14), 0, 0)
+            setOnClickListener { onClick() }
+        }
+
+        private fun openUrl(url: String) {
+            if (!isTrustedStorageUrl(url)) {
+                Toast.makeText(ctx, "Link isn't a Firebase Storage URL", Toast.LENGTH_SHORT).show()
+                return
+            }
+            try {
+                ctx.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(url)).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
+            } catch (e: Exception) {
+                Toast.makeText(ctx, "Can't open file", Toast.LENGTH_SHORT).show()
+            }
         }
     }
 }

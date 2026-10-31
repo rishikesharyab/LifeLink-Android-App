@@ -59,6 +59,7 @@ dependencies {
     implementation("com.google.firebase:firebase-firestore:24.10.0")
     implementation("com.google.firebase:firebase-storage-ktx")
     implementation("com.google.firebase:firebase-messaging")
+    implementation("com.google.firebase:firebase-functions")
 
 
     // Google Maps

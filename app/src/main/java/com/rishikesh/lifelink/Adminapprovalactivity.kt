@@ -15,6 +15,7 @@ import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.DocumentSnapshot
 import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.functions.FirebaseFunctions
+import com.google.firebase.storage.FirebaseStorage
 import com.rishikesh.lifelink.model.NgoRegistration
 import com.rishikesh.lifelink.util.applySystemBarInsets
 
@@ -144,6 +145,7 @@ class AdminApprovalActivity : AppCompatActivity() {
                                 panNumber = verif?.getString("panNumber") ?: "",
                                 ngoDarpanId = verif?.getString("ngoDarpanId") ?: "",
                                 certificateUrl = verif?.getString("certificateUrl") ?: "",
+                                certificatePath = verif?.getString("certificatePath") ?: "",
                                 verificationStatus = status,
                                 rejectionReason = rejectionReason
                             )
@@ -182,15 +184,29 @@ class AdminApprovalActivity : AppCompatActivity() {
     }
 
     private fun openCertificate(org: NgoRegistration) {
+        if (org.certificatePath.isNotBlank()) {
+            // Private file: resolve a fresh URL at view time (admin claim passes the storage rule)
+            FirebaseStorage.getInstance().reference.child(org.certificatePath).downloadUrl
+                .addOnSuccessListener { openTrustedUrl(it.toString()) }
+                .addOnFailureListener {
+                    Toast.makeText(this, "Couldn't open certificate", Toast.LENGTH_SHORT).show()
+                }
+            return
+        }
+        // Legacy orgs registered before paths were stored
         if (org.certificateUrl.isBlank()) {
             Toast.makeText(this, "No certificate uploaded", Toast.LENGTH_SHORT).show()
             return
         }
-        if (!isTrustedStorageUrl(org.certificateUrl)) {
+        openTrustedUrl(org.certificateUrl)
+    }
+
+    private fun openTrustedUrl(url: String) {
+        if (!isTrustedStorageUrl(url)) {
             Toast.makeText(this, "Certificate link isn't a Firebase Storage URL", Toast.LENGTH_SHORT).show()
             return
         }
-        startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(org.certificateUrl)))
+        startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(url)))
     }
 
     private fun confirmApprove(org: NgoRegistration) {

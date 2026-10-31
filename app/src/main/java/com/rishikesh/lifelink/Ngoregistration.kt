@@ -11,6 +11,7 @@ data class NgoRegistration(
     val panNumber: String = "",
     val ngoDarpanId: String = "",
     val certificateUrl: String = "",
+    val certificatePath: String = "",
     val verificationStatus: String = "pending",
     val rejectionReason: String = ""
 )
